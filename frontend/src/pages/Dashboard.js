@@ -203,48 +203,6 @@ const Dashboard = () => {
                 </Col>
             </Row>
             
-            {/* 부서별 분포 및 시스템 정보 */}
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col xs={24} lg={12}>
-                    <Card title="부서별 License 분포">
-                        <Row gutter={16}>
-                            {Object.entries(summary?.departmentBreakdown || {}).map(([dept, count]) => (
-                                <Col span={8} key={dept}>
-                                    <Statistic
-                                        title={dept}
-                                        value={count}
-                                        suffix="개"
-                                    />
-                                </Col>
-                            ))}
-                            {Object.keys(summary?.departmentBreakdown || {}).length === 0 && (
-                                <Col span={24}>
-                                    <Text type="secondary">부서별 데이터가 없습니다</Text>
-                                </Col>
-                            )}
-                        </Row>
-                    </Card>
-                </Col>
-                
-                <Col xs={24} lg={12}>
-                    <Card title="시스템 정보">
-                        <div style={{ lineHeight: '2' }}>
-                            <Text strong>마지막 업데이트: </Text>
-                            <Text>{formatDateTime(new Date())}</Text>
-                            <br />
-                            <Text strong>시간대: </Text>
-                            <Text>서울 (GMT+9)</Text>
-                            <br />
-                            <Text strong>총 Feature 수: </Text>
-                            <Text>{summary?.totalFeatures || 0}개</Text>
-                            <br />
-                            <Text strong>만료된 License: </Text>
-                            <Text style={{ color: '#ff4d4f' }}>{summary?.expired || 0}개</Text>
-                        </div>
-                    </Card>
-                </Col>
-            </Row>
-            
             {/* 만료 예정 License 테이블 */}
             <Card 
                 title="30일 내 만료 예정 License" 

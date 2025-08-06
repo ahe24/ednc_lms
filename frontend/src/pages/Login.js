@@ -83,15 +83,18 @@ const Login = () => {
             minHeight: '100vh', 
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
+            padding: '20px',
+            position: 'relative'
         }}>
             <Card 
                 style={{ 
                     width: 400, 
                     boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                    borderRadius: '12px'
+                    borderRadius: '12px',
+                    marginBottom: '20px'
                 }}
             >
                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -148,6 +151,40 @@ const Login = () => {
                     </Text>
                 </div>
             </Card>
+            
+            {/* Footer */}
+            <div style={{ 
+                position: 'absolute',
+                bottom: '20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.9)',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                backdropFilter: 'blur(10px)'
+            }}>
+                <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    gap: '4px'
+                }}>
+                    <div style={{ 
+                        fontSize: '12px',
+                        color: '#666'
+                    }}>
+                        © 2025 EDMFG • EDA Team • Developed by cs.jo
+                    </div>
+                    <div style={{ 
+                        fontSize: '12px',
+                        color: '#1890ff',
+                        fontWeight: '500'
+                    }}>
+                        EDNC License 관리 시스템
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

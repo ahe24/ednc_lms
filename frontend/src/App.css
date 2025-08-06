@@ -69,3 +69,146 @@ body {
   border-color: #1890ff;
   background: #e6f7ff;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* Header adjustments for mobile */
+  .ant-layout-header {
+    padding: 0 8px !important;
+    height: auto !important;
+    min-height: 64px !important;
+  }
+
+  /* Menu adjustments for mobile */
+  .ant-menu-horizontal {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
+  .ant-menu-horizontal > .ant-menu-item,
+  .ant-menu-horizontal > .ant-menu-submenu {
+    padding: 0 8px !important;
+    margin: 0 2px !important;
+  }
+
+  /* Content adjustments for mobile */
+  .ant-layout-content {
+    margin: 8px !important;
+    padding: 16px !important;
+  }
+
+  /* Table adjustments for mobile */
+  .ant-table {
+    font-size: 12px !important;
+  }
+
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 8px 4px !important;
+  }
+
+  /* Card adjustments for mobile */
+  .ant-card {
+    margin-bottom: 16px !important;
+  }
+
+  .ant-card-head {
+    padding: 0 12px !important;
+  }
+
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  /* Form adjustments for mobile */
+  .ant-form-item {
+    margin-bottom: 16px !important;
+  }
+
+  .ant-form-item-label {
+    padding-bottom: 4px !important;
+  }
+
+  /* Button adjustments for mobile */
+  .ant-btn {
+    height: 36px !important;
+    font-size: 14px !important;
+  }
+
+  /* Modal adjustments for mobile */
+  .ant-modal {
+    margin: 16px !important;
+    max-width: calc(100vw - 32px) !important;
+  }
+
+  .ant-modal-content {
+    border-radius: 8px !important;
+  }
+
+  .ant-modal-header {
+    padding: 16px !important;
+  }
+
+  .ant-modal-body {
+    padding: 16px !important;
+  }
+
+  .ant-modal-footer {
+    padding: 12px 16px !important;
+  }
+
+  /* Statistics adjustments for mobile */
+  .ant-statistic-title {
+    font-size: 12px !important;
+  }
+
+  .ant-statistic-content {
+    font-size: 20px !important;
+  }
+
+  /* Upload area adjustments for mobile */
+  .upload-area {
+    padding: 20px !important;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .ant-layout-header {
+    padding: 0 4px !important;
+  }
+
+  .ant-menu-horizontal > .ant-menu-item,
+  .ant-menu-horizontal > .ant-menu-submenu {
+    padding: 0 4px !important;
+    margin: 0 1px !important;
+  }
+
+  .ant-layout-content {
+    margin: 4px !important;
+    padding: 12px !important;
+  }
+
+  .ant-card-body {
+    padding: 8px !important;
+  }
+}
+
+/* Dragger upload component adjustments */
+.ant-upload-drag {
+  padding: 20px 16px !important;
+}
+
+.ant-upload-drag .ant-upload-drag-icon {
+  margin-bottom: 8px !important;
+}
+
+.ant-upload-drag .ant-upload-text {
+  margin-bottom: 4px !important;
+  font-size: 14px !important;
+}
+
+.ant-upload-drag .ant-upload-hint {
+  margin-bottom: 0 !important;
+  font-size: 12px !important;
+}

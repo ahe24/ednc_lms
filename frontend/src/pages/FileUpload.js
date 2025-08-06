@@ -175,14 +175,14 @@ const FileUpload = () => {
                             {/* 파일 업로드 영역 */}
                             <div style={{ marginBottom: 16 }}>
                                 <div style={{ marginBottom: 8, fontWeight: 500 }}>License 파일</div>
-                                <Dragger {...uploadProps} style={{ padding: '40px 20px' }}>
-                                    <p className="ant-upload-drag-icon">
-                                        <InboxOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+                                <Dragger {...uploadProps} style={{ padding: '20px 16px' }}>
+                                    <p className="ant-upload-drag-icon" style={{ marginBottom: 8 }}>
+                                        <InboxOutlined style={{ fontSize: '32px', color: '#1890ff' }} />
                                     </p>
-                                    <p className="ant-upload-text">
+                                    <p className="ant-upload-text" style={{ marginBottom: 4, fontSize: '14px' }}>
                                         클릭하거나 파일을 여기로 드래그하여 업로드
                                     </p>
-                                    <p className="ant-upload-hint">
+                                    <p className="ant-upload-hint" style={{ marginBottom: 0, fontSize: '12px' }}>
                                         Siemens License 파일(.lic) 또는 텍스트 파일(.txt)을 지원합니다<br />
                                         최대 파일 크기: 10MB
                                     </p>
