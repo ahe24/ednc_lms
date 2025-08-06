@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Table, 
     Card, 
@@ -47,8 +47,13 @@ const LicenseManagement = () => {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [showAllFeatures, setShowAllFeatures] = useState(false);
     
+    // Debounced search effect
     useEffect(() => {
-        loadLicenses();
+        const timeoutId = setTimeout(() => {
+            loadLicenses();
+        }, filters.search !== '' ? 500 : 0); // 500ms delay for search, immediate for other filters
+        
+        return () => clearTimeout(timeoutId);
     }, [pagination.current, pagination.pageSize, filters]);
     
     const loadLicenses = async () => {
@@ -57,7 +62,9 @@ const LicenseManagement = () => {
             const params = {
                 page: pagination.current,
                 limit: pagination.pageSize,
-                ...(filters.department && { department: filters.department })
+                ...(filters.search && { search: filters.search }),
+                ...(filters.department && { department: filters.department }),
+                ...(filters.status && { status: filters.status })
             };
             
             const response = await apiClient.get('/api/licenses', { params });
@@ -246,19 +253,29 @@ const LicenseManagement = () => {
                     <Col xs={24} sm={12} md={8}>
                         <Search
                             placeholder="License 검색..."
+                            value={filters.search}
                             onSearch={handleSearch}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setFilters(prev => ({ ...prev, search: value }));
+                                if (value === '') {
+                                    setPagination(prev => ({ ...prev, current: 1 }));
+                                }
+                            }}
                             style={{ width: '100%' }}
                             enterButton={<SearchOutlined />}
+                            allowClear
                         />
                     </Col>
                     <Col xs={24} sm={12} md={4}>
                         <Select
                             placeholder="부서 선택"
                             style={{ width: '100%' }}
-                            value={filters.department}
-                            onChange={(value) => handleFilterChange('department', value)}
+                            value={filters.department || undefined}
+                            onChange={(value) => handleFilterChange('department', value || '')}
                             allowClear
                         >
+                            <Option value="">전체 부서</Option>
                             <Option value="EDA">EDA</Option>
                             <Option value="PADS">PADS</Option>
                             <Option value="CAD">CAD</Option>
@@ -268,10 +285,11 @@ const LicenseManagement = () => {
                         <Select
                             placeholder="상태 선택"
                             style={{ width: '100%' }}
-                            value={filters.status}
-                            onChange={(value) => handleFilterChange('status', value)}
+                            value={filters.status || undefined}
+                            onChange={(value) => handleFilterChange('status', value || '')}
                             allowClear
                         >
+                            <Option value="">전체 상태</Option>
                             <Option value="active">정상</Option>
                             <Option value="expiring">만료 임박</Option>
                             <Option value="expired">만료됨</Option>

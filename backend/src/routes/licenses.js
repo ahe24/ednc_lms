@@ -222,7 +222,7 @@ router.get('/expiring', async (req, res) => {
 // License 목록 조회
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 20, siteId, department, status } = req.query;
+        const { page = 1, limit = 20, siteId, department, status, search } = req.query;
         const offset = (page - 1) * limit;
 
         let whereClause = 'WHERE 1=1';
@@ -236,6 +236,29 @@ router.get('/', async (req, res) => {
         if (department) {
             whereClause += ' AND l.department = ?';
             params.push(department);
+        }
+
+        if (search) {
+            whereClause += ' AND (l.part_name LIKE ? OR l.client_name LIKE ? OR l.manager_name LIKE ? OR s.site_name LIKE ? OR s.site_number LIKE ?)';
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+
+        // 상태 필터링 조건 추가
+        if (status) {
+            const today = moment().format('YYYY-MM-DD');
+            const thirtyDaysFromNow = moment().add(30, 'days').format('YYYY-MM-DD');
+            
+            if (status === 'expired') {
+                whereClause += ' AND EXISTS (SELECT 1 FROM license_features lf_status WHERE lf_status.license_id = l.id AND lf_status.expiry_date < ?)';
+                params.push(today);
+            } else if (status === 'expiring') {
+                whereClause += ' AND EXISTS (SELECT 1 FROM license_features lf_status WHERE lf_status.license_id = l.id AND lf_status.expiry_date >= ? AND lf_status.expiry_date < ?)';
+                params.push(today, thirtyDaysFromNow);
+            } else if (status === 'active') {
+                whereClause += ' AND EXISTS (SELECT 1 FROM license_features lf_status WHERE lf_status.license_id = l.id AND lf_status.expiry_date >= ?)';
+                params.push(thirtyDaysFromNow);
+            }
         }
 
         const query = `
