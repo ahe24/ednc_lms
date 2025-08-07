@@ -20,7 +20,9 @@ import {
     SearchOutlined, 
     ReloadOutlined, 
     DeleteOutlined,
-    ExclamationCircleOutlined
+    ExclamationCircleOutlined,
+    EditOutlined,
+    SaveOutlined
 } from '@ant-design/icons';
 import { apiClient } from '../config/api';
 import { formatDate, formatDateTime, getExpiryStatus } from '../config/locale';
@@ -49,6 +51,8 @@ const LicenseManagement = () => {
     const [fileContentModalVisible, setFileContentModalVisible] = useState(false);
     const [fileContent, setFileContent] = useState(null);
     const [loadingFileContent, setLoadingFileContent] = useState(false);
+    const [editingModal, setEditingModal] = useState(false);
+    const [editingValues, setEditingValues] = useState({});
     
     // Debounced search effect
     useEffect(() => {
@@ -150,6 +154,50 @@ const LicenseManagement = () => {
         });
     };
     
+    const startModalEditing = () => {
+        setEditingModal(true);
+        setEditingValues({
+            manager_name: selectedLicense.license.manager_name || '',
+            client_name: selectedLicense.license.client_name || ''
+        });
+    };
+    
+    const cancelModalEditing = () => {
+        setEditingModal(false);
+        setEditingValues({});
+    };
+    
+    const saveModalEditing = async () => {
+        try {
+            const updateData = {
+                manager_name: editingValues.manager_name,
+                client_name: editingValues.client_name
+            };
+            
+            await apiClient.put(`/api/licenses/${selectedLicense.license.id}`, updateData);
+            message.success('License 정보가 업데이트되었습니다');
+            setEditingModal(false);
+            setEditingValues({});
+            
+            // Refresh the selected license data
+            const response = await apiClient.get(`/api/licenses/${selectedLicense.license.id}`);
+            setSelectedLicense(response.data.data);
+            
+            // Refresh the main table
+            loadLicenses();
+        } catch (error) {
+            console.error('License 업데이트 실패:', error);
+            message.error('License 정보 업데이트에 실패했습니다');
+        }
+    };
+    
+    const handleModalEditingValueChange = (field, value) => {
+        setEditingValues(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+    
     const columns = [
         {
             title: '사이트명',
@@ -159,10 +207,22 @@ const LicenseManagement = () => {
             ellipsis: true,
         },
         {
-            title: '사이트 번호',
-            dataIndex: 'site_number',
-            key: 'site_number',
-            width: 100,
+            title: '만료일',
+            dataIndex: 'earliest_expiry',
+            key: 'earliest_expiry',
+            width: 120,
+            render: (date) => {
+                if (!date) return '-';
+                const status = getExpiryStatus(date);
+                return (
+                    <div>
+                        <div>{formatDate(date, 'MM/DD')}</div>
+                        <Tag color={status.color} size="small">
+                            {status.text}
+                        </Tag>
+                    </div>
+                );
+            }
         },
         {
             title: '고객명',
@@ -200,24 +260,6 @@ const LicenseManagement = () => {
             render: (count) => `${count || 0}개`,
         },
         {
-            title: '가장 빠른 만료일',
-            dataIndex: 'earliest_expiry',
-            key: 'earliest_expiry',
-            width: 120,
-            render: (date) => {
-                if (!date) return '-';
-                const status = getExpiryStatus(date);
-                return (
-                    <div>
-                        <div>{formatDate(date, 'MM/DD')}</div>
-                        <Tag color={status.color} size="small">
-                            {status.text}
-                        </Tag>
-                    </div>
-                );
-            }
-        },
-        {
             title: '업로드일',
             dataIndex: 'upload_date',
             key: 'upload_date',
@@ -228,7 +270,6 @@ const LicenseManagement = () => {
             title: '작업',
             key: 'action',
             width: 80,
-            fixed: 'right',
             render: (_, record) => (
                 <Space size="small" onClick={(e) => e.stopPropagation()}>
                     <Button 
@@ -354,20 +395,55 @@ const LicenseManagement = () => {
                 onCancel={() => {
                     setDetailModalVisible(false);
                     setShowAllFeatures(false);
+                    setEditingModal(false);
+                    setEditingValues({});
                 }}
-                footer={[
-                    <Button key="close" onClick={() => {
-                        setDetailModalVisible(false);
-                        setShowAllFeatures(false);
-                    }}>
-                        닫기
-                    </Button>
-                ]}
+                footer={null}
                 width={800}
             >
                 {selectedLicense && (
                     <div>
-                        <Descriptions title="기본 정보" bordered column={2} size="small">
+                        {/* 상단 버튼 영역 */}
+                        <div style={{ 
+                            marginBottom: 24, 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center' 
+                        }}>
+                            <Title level={4} style={{ margin: 0 }}>
+                                기본 정보
+                            </Title>
+                            <Space>
+                                {editingModal ? (
+                                    <>
+                                        <Button onClick={cancelModalEditing}>
+                                            취소
+                                        </Button>
+                                        <Button 
+                                            type="primary" 
+                                            icon={<SaveOutlined />}
+                                            onClick={saveModalEditing}
+                                        >
+                                            저장
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button icon={<EditOutlined />} onClick={startModalEditing}>
+                                            편집
+                                        </Button>
+                                        <Button onClick={() => {
+                                            setDetailModalVisible(false);
+                                            setShowAllFeatures(false);
+                                        }}>
+                                            닫기
+                                        </Button>
+                                    </>
+                                )}
+                            </Space>
+                        </div>
+                        
+                        <Descriptions bordered column={2} size="small">
                             <Descriptions.Item label="사이트명">
                                 {selectedLicense.license.site_name}
                             </Descriptions.Item>
@@ -384,13 +460,33 @@ const LicenseManagement = () => {
                                 {selectedLicense.license.host_id}
                             </Descriptions.Item>
                             <Descriptions.Item label="담당자">
-                                {selectedLicense.license.manager_name || '-'}
+                                {editingModal ? (
+                                    <Input
+                                        value={editingValues.manager_name}
+                                        onChange={(e) => handleModalEditingValueChange('manager_name', e.target.value)}
+                                        placeholder="담당자 입력"
+                                        size="small"
+                                        style={{ maxWidth: '200px' }}
+                                    />
+                                ) : (
+                                    selectedLicense.license.manager_name || '-'
+                                )}
                             </Descriptions.Item>
                             <Descriptions.Item label="부서">
                                 {selectedLicense.license.department || '-'}
                             </Descriptions.Item>
                             <Descriptions.Item label="고객명">
-                                {selectedLicense.license.client_name || '-'}
+                                {editingModal ? (
+                                    <Input
+                                        value={editingValues.client_name}
+                                        onChange={(e) => handleModalEditingValueChange('client_name', e.target.value)}
+                                        placeholder="고객명 입력"
+                                        size="small"
+                                        style={{ maxWidth: '200px' }}
+                                    />
+                                ) : (
+                                    selectedLicense.license.client_name || '-'
+                                )}
                             </Descriptions.Item>
                             <Descriptions.Item label="업로드일">
                                 {formatDateTime(selectedLicense.license.upload_date)}

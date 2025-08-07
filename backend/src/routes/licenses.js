@@ -399,6 +399,46 @@ router.get('/:id/content', async (req, res) => {
     }
 });
 
+// License 업데이트 (담당자, 고객명)
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { manager_name, client_name } = req.body;
+
+        // License 존재 확인
+        const license = await DatabaseService.get('SELECT * FROM licenses WHERE id = ?', [id]);
+        if (!license) {
+            return res.status(404).json({
+                error: 'License를 찾을 수 없습니다'
+            });
+        }
+
+        // License 업데이트
+        await DatabaseService.run(`
+            UPDATE licenses 
+            SET manager_name = ?, client_name = ?
+            WHERE id = ?
+        `, [manager_name || null, client_name || null, id]);
+
+        res.json({
+            success: true,
+            message: 'License 정보가 성공적으로 업데이트되었습니다',
+            data: {
+                id: id,
+                manager_name: manager_name,
+                client_name: client_name
+            }
+        });
+
+    } catch (error) {
+        console.error('License 업데이트 오류:', error);
+        res.status(500).json({
+            error: '서버 오류',
+            message: 'License 정보 업데이트 중 오류가 발생했습니다'
+        });
+    }
+});
+
 // License 삭제
 router.delete('/:id', async (req, res) => {
     try {
