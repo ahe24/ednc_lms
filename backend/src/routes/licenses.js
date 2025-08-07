@@ -360,6 +360,45 @@ router.get('/:id', async (req, res) => {
 });
 
 
+// License 파일 원본 내용 조회
+router.get('/:id/content', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const license = await DatabaseService.get('SELECT * FROM licenses WHERE id = ?', [id]);
+        if (!license) {
+            return res.status(404).json({
+                error: 'License를 찾을 수 없습니다'
+            });
+        }
+
+        const filePath = path.join(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'), license.file_name);
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({
+                error: 'License 파일을 찾을 수 없습니다'
+            });
+        }
+
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+
+        res.json({
+            success: true,
+            data: {
+                fileName: license.file_name,
+                content: fileContent
+            }
+        });
+
+    } catch (error) {
+        console.error('License 파일 내용 조회 오류:', error);
+        res.status(500).json({
+            error: '서버 오류',
+            message: 'License 파일 내용 조회 중 오류가 발생했습니다'
+        });
+    }
+});
+
 // License 삭제
 router.delete('/:id', async (req, res) => {
     try {

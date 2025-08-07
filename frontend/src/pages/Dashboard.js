@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Alert, Table, Tag, Typography, Button, Spin, Modal, Descriptions } from 'antd';
+import { Row, Col, Card, Statistic, Alert, Table, Tag, Typography, Button, Spin, Modal, Descriptions, message } from 'antd';
 import { 
     FileTextOutlined, 
     ExclamationCircleOutlined, 
@@ -20,6 +20,9 @@ const Dashboard = () => {
     const [selectedLicense, setSelectedLicense] = useState(null);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [showAllFeatures, setShowAllFeatures] = useState(false);
+    const [fileContentModalVisible, setFileContentModalVisible] = useState(false);
+    const [fileContent, setFileContent] = useState(null);
+    const [loadingFileContent, setLoadingFileContent] = useState(false);
     
     useEffect(() => {
         loadDashboardData();
@@ -60,6 +63,20 @@ const Dashboard = () => {
             setDetailModalVisible(true);
         } catch (error) {
             console.error('License 상세 조회 실패:', error);
+        }
+    };
+    
+    const showLicenseFileContent = async (record) => {
+        setLoadingFileContent(true);
+        try {
+            const response = await apiClient.get(`/api/licenses/${record.id}/content`);
+            setFileContent(response.data.data);
+            setFileContentModalVisible(true);
+        } catch (error) {
+            console.error('License 파일 내용 조회 실패:', error);
+            message.error('License 파일 내용을 불러오는데 실패했습니다');
+        } finally {
+            setLoadingFileContent(false);
         }
     };
     
@@ -171,11 +188,11 @@ const Dashboard = () => {
                 <Col xs={24} sm={12} lg={6}>
                     <Card>
                         <Statistic
-                            title="30일 내 만료"
-                            value={summary?.expiringIn30Days || 0}
+                            title="이미 만료됨"
+                            value={summary?.expired || 0}
                             prefix={<ExclamationCircleOutlined />}
                             suffix="개"
-                            valueStyle={{ color: '#faad14' }}
+                            valueStyle={{ color: '#ff4d4f' }}
                         />
                     </Card>
                 </Col>
@@ -186,18 +203,18 @@ const Dashboard = () => {
                             value={summary?.expiringIn7Days || 0}
                             prefix={<ExclamationCircleOutlined />}
                             suffix="개"
-                            valueStyle={{ color: '#ff4d4f' }}
+                            valueStyle={{ color: '#fa8c16' }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
                     <Card>
                         <Statistic
-                            title="활성 사이트"
-                            value={summary?.activeSites || 0}
-                            prefix={<CheckCircleOutlined />}
+                            title="30일 내 만료"
+                            value={summary?.expiringIn30Days || 0}
+                            prefix={<ExclamationCircleOutlined />}
                             suffix="개"
-                            valueStyle={{ color: '#52c41a' }}
+                            valueStyle={{ color: '#faad14' }}
                         />
                     </Card>
                 </Col>
@@ -289,7 +306,14 @@ const Dashboard = () => {
                                 {formatDateTime(selectedLicense.license.upload_date)}
                             </Descriptions.Item>
                             <Descriptions.Item label="파일명">
-                                {selectedLicense.license.file_name}
+                                <Button 
+                                    type="link" 
+                                    style={{ padding: 0, height: 'auto', fontSize: 'inherit' }}
+                                    onClick={() => showLicenseFileContent(selectedLicense.license)}
+                                    loading={loadingFileContent}
+                                >
+                                    {selectedLicense.license.file_name}
+                                </Button>
                             </Descriptions.Item>
                         </Descriptions>
                         
@@ -425,6 +449,58 @@ const Dashboard = () => {
                         )}
                     </div>
                 )}
+            </Modal>
+            
+            {/* License 파일 내용 모달 */}
+            <Modal
+                title={`License 파일 내용 - ${fileContent?.fileName || ''}`}
+                open={fileContentModalVisible}
+                onCancel={() => {
+                    setFileContentModalVisible(false);
+                    setFileContent(null);
+                }}
+                footer={[
+                    <Button key="close" onClick={() => {
+                        setFileContentModalVisible(false);
+                        setFileContent(null);
+                    }}>
+                        닫기
+                    </Button>
+                ]}
+                width={1000}
+                style={{ top: 20 }}
+            >
+                {loadingFileContent ? (
+                    <div style={{ textAlign: 'center', padding: '50px' }}>
+                        <Text>파일 내용을 불러오는 중...</Text>
+                    </div>
+                ) : fileContent ? (
+                    <div>
+                        <Alert
+                            message={`파일명: ${fileContent.fileName}`}
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                        />
+                        <div
+                            style={{
+                                backgroundColor: '#f6f8fa',
+                                border: '1px solid #d0d7de',
+                                borderRadius: '6px',
+                                padding: '16px',
+                                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                                fontSize: '12px',
+                                lineHeight: '1.5',
+                                maxHeight: '70vh',
+                                overflow: 'auto',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all'
+                            }}
+                        >
+                            {fileContent.content}
+                        </div>
+                    </div>
+                ) : null}
             </Modal>
         </div>
     );

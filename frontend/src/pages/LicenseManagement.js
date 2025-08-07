@@ -46,6 +46,9 @@ const LicenseManagement = () => {
     const [selectedLicense, setSelectedLicense] = useState(null);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [showAllFeatures, setShowAllFeatures] = useState(false);
+    const [fileContentModalVisible, setFileContentModalVisible] = useState(false);
+    const [fileContent, setFileContent] = useState(null);
+    const [loadingFileContent, setLoadingFileContent] = useState(false);
     
     // Debounced search effect
     useEffect(() => {
@@ -109,6 +112,20 @@ const LicenseManagement = () => {
         } catch (error) {
             console.error('License 상세 조회 실패:', error);
             message.error('License 상세 정보를 불러오는데 실패했습니다');
+        }
+    };
+    
+    const showLicenseFileContent = async (record) => {
+        setLoadingFileContent(true);
+        try {
+            const response = await apiClient.get(`/api/licenses/${record.id}/content`);
+            setFileContent(response.data.data);
+            setFileContentModalVisible(true);
+        } catch (error) {
+            console.error('License 파일 내용 조회 실패:', error);
+            message.error('License 파일 내용을 불러오는데 실패했습니다');
+        } finally {
+            setLoadingFileContent(false);
         }
     };
     
@@ -379,7 +396,14 @@ const LicenseManagement = () => {
                                 {formatDateTime(selectedLicense.license.upload_date)}
                             </Descriptions.Item>
                             <Descriptions.Item label="파일명">
-                                {selectedLicense.license.file_name}
+                                <Button 
+                                    type="link" 
+                                    style={{ padding: 0, height: 'auto', fontSize: 'inherit' }}
+                                    onClick={() => showLicenseFileContent(selectedLicense.license)}
+                                    loading={loadingFileContent}
+                                >
+                                    {selectedLicense.license.file_name}
+                                </Button>
                             </Descriptions.Item>
                         </Descriptions>
                         
@@ -515,6 +539,58 @@ const LicenseManagement = () => {
                         )}
                     </div>
                 )}
+            </Modal>
+            
+            {/* License 파일 내용 모달 */}
+            <Modal
+                title={`License 파일 내용 - ${fileContent?.fileName || ''}`}
+                open={fileContentModalVisible}
+                onCancel={() => {
+                    setFileContentModalVisible(false);
+                    setFileContent(null);
+                }}
+                footer={[
+                    <Button key="close" onClick={() => {
+                        setFileContentModalVisible(false);
+                        setFileContent(null);
+                    }}>
+                        닫기
+                    </Button>
+                ]}
+                width={1000}
+                style={{ top: 20 }}
+            >
+                {loadingFileContent ? (
+                    <div style={{ textAlign: 'center', padding: '50px' }}>
+                        <Text>파일 내용을 불러오는 중...</Text>
+                    </div>
+                ) : fileContent ? (
+                    <div>
+                        <Alert
+                            message={`파일명: ${fileContent.fileName}`}
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                        />
+                        <div
+                            style={{
+                                backgroundColor: '#f6f8fa',
+                                border: '1px solid #d0d7de',
+                                borderRadius: '6px',
+                                padding: '16px',
+                                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                                fontSize: '12px',
+                                lineHeight: '1.5',
+                                maxHeight: '70vh',
+                                overflow: 'auto',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all'
+                            }}
+                        >
+                            {fileContent.content}
+                        </div>
+                    </div>
+                ) : null}
             </Modal>
         </div>
     );
