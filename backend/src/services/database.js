@@ -210,8 +210,10 @@ class DatabaseService {
     // 마이그레이션 실행
     async runMigrations() {
         try {
-            // client_name 컬럼 추가 마이그레이션
+            // 테이블 컬럼 정보 조회
             const columns = await this.all("PRAGMA table_info(licenses)");
+            
+            // client_name 컬럼 추가 마이그레이션
             const hasClientName = columns.some(col => col.name === 'client_name');
             
             if (!hasClientName) {
@@ -220,6 +222,17 @@ class DatabaseService {
                 console.log('✅ client_name 컬럼 추가 완료');
             } else {
                 console.log('✅ client_name 컬럼이 이미 존재합니다');
+            }
+            
+            // memo 컬럼 추가 마이그레이션
+            const hasMemo = columns.some(col => col.name === 'memo');
+            
+            if (!hasMemo) {
+                console.log('🔄 memo 컬럼 추가 중...');
+                await this.run('ALTER TABLE licenses ADD COLUMN memo TEXT');
+                console.log('✅ memo 컬럼 추가 완료');
+            } else {
+                console.log('✅ memo 컬럼이 이미 존재합니다');
             }
         } catch (error) {
             console.error('❌ 마이그레이션 실행 실패:', error.message);

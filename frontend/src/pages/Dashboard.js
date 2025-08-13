@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Alert, Table, Tag, Typography, Button, Spin, Modal, Descriptions, message } from 'antd';
+import { Row, Col, Card, Statistic, Alert, Table, Tag, Typography, Button, Spin, Modal, Descriptions, message, Tooltip } from 'antd';
 import { 
     FileTextOutlined, 
     ExclamationCircleOutlined, 
@@ -7,12 +7,14 @@ import {
     ClockCircleOutlined,
     ReloadOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { formatDate, formatDateTime, getExpiryStatus } from '../config/locale';
 
 const { Title, Text } = Typography;
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const [summary, setSummary] = useState(null);
     const [expiringLicenses, setExpiringLicenses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -80,6 +82,33 @@ const Dashboard = () => {
         }
     };
     
+    const navigateToLicenseManagement = (filterType) => {
+        const baseUrl = '/licenses';
+        const params = new URLSearchParams();
+        
+        switch (filterType) {
+            case 'total':
+                // No filter - show all licenses
+                break;
+            case 'expired':
+                params.set('status', 'expired');
+                break;
+            case 'expiring7':
+                params.set('status', 'expiring');
+                params.set('days', '7');
+                break;
+            case 'expiring30':
+                params.set('status', 'expiring');
+                params.set('days', '30');
+                break;
+            default:
+                break;
+        }
+        
+        const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+        navigate(url);
+    };
+    
     const expiringColumns = [
         {
             title: '사이트명',
@@ -127,6 +156,28 @@ const Dashboard = () => {
             key: 'manager_name',
             width: 80,
             render: (name) => name || '-'
+        },
+        {
+            title: '메모',
+            dataIndex: 'memo',
+            key: 'memo',
+            width: 100,
+            render: (memo) => {
+                if (!memo) return '-';
+                
+                const truncatedMemo = memo.length > 20 ? `${memo.substring(0, 20)}...` : memo;
+                
+                return (
+                    <Tooltip title={memo} placement="topLeft">
+                        <span style={{ 
+                            cursor: 'help',
+                            color: '#1890ff'
+                        }}>
+                            {truncatedMemo}
+                        </span>
+                    </Tooltip>
+                );
+            }
         }
     ];
     
@@ -176,7 +227,11 @@ const Dashboard = () => {
             {/* 요약 카드 */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card>
+                    <Card 
+                        hoverable
+                        onClick={() => navigateToLicenseManagement('total')}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <Statistic
                             title="총 License"
                             value={summary?.totalLicenses || 0}
@@ -186,7 +241,11 @@ const Dashboard = () => {
                     </Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card>
+                    <Card 
+                        hoverable
+                        onClick={() => navigateToLicenseManagement('expired')}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <Statistic
                             title="이미 만료됨"
                             value={summary?.expired || 0}
@@ -197,7 +256,11 @@ const Dashboard = () => {
                     </Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card>
+                    <Card 
+                        hoverable
+                        onClick={() => navigateToLicenseManagement('expiring7')}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <Statistic
                             title="7일 내 만료"
                             value={summary?.expiringIn7Days || 0}
@@ -208,7 +271,11 @@ const Dashboard = () => {
                     </Card>
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
-                    <Card>
+                    <Card 
+                        hoverable
+                        onClick={() => navigateToLicenseManagement('expiring30')}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <Statistic
                             title="30일 내 만료"
                             value={summary?.expiringIn30Days || 0}
@@ -314,6 +381,18 @@ const Dashboard = () => {
                                 >
                                     {selectedLicense.license.file_name}
                                 </Button>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="메모" span={2}>
+                                <div style={{ 
+                                    whiteSpace: 'pre-wrap', 
+                                    minHeight: '20px',
+                                    color: selectedLicense.license.memo ? 'inherit' : '#999',
+                                    background: selectedLicense.license.memo ? '#f6f8fa' : 'transparent',
+                                    padding: selectedLicense.license.memo ? '8px' : '0',
+                                    borderRadius: '4px'
+                                }}>
+                                    {selectedLicense.license.memo || '메모 없음'}
+                                </div>
                             </Descriptions.Item>
                         </Descriptions>
                         

@@ -14,7 +14,8 @@ import {
     Col,
     Typography,
     Alert,
-    Statistic
+    Statistic,
+    Tooltip
 } from 'antd';
 import { 
     SearchOutlined, 
@@ -24,15 +25,17 @@ import {
     EditOutlined,
     SaveOutlined
 } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { formatDate, formatDateTime, getExpiryStatus } from '../config/locale';
 
-const { Search } = Input;
+const { Search, TextArea } = Input;
 const { Option } = Select;
 const { Title, Text } = Typography;
 const { confirm } = Modal;
 
 const LicenseManagement = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [licenses, setLicenses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [pagination, setPagination] = useState({
@@ -53,6 +56,22 @@ const LicenseManagement = () => {
     const [loadingFileContent, setLoadingFileContent] = useState(false);
     const [editingModal, setEditingModal] = useState(false);
     const [editingValues, setEditingValues] = useState({});
+    
+    // Initialize filters from URL parameters
+    useEffect(() => {
+        const urlStatus = searchParams.get('status');
+        const urlDays = searchParams.get('days');
+        
+        if (urlStatus) {
+            setFilters(prev => ({ ...prev, status: urlStatus }));
+        }
+        
+        // Handle days parameter for expiring filters
+        if (urlStatus === 'expiring' && urlDays) {
+            // For now, we'll just use the status filter as the backend should handle this
+            // You might want to pass the days parameter to the backend if it supports it
+        }
+    }, [searchParams]);
     
     // Debounced search effect
     useEffect(() => {
@@ -158,7 +177,8 @@ const LicenseManagement = () => {
         setEditingModal(true);
         setEditingValues({
             manager_name: selectedLicense.license.manager_name || '',
-            client_name: selectedLicense.license.client_name || ''
+            client_name: selectedLicense.license.client_name || '',
+            memo: selectedLicense.license.memo || ''
         });
     };
     
@@ -171,7 +191,8 @@ const LicenseManagement = () => {
         try {
             const updateData = {
                 manager_name: editingValues.manager_name,
-                client_name: editingValues.client_name
+                client_name: editingValues.client_name,
+                memo: editingValues.memo
             };
             
             await apiClient.put(`/api/licenses/${selectedLicense.license.id}`, updateData);
@@ -265,6 +286,28 @@ const LicenseManagement = () => {
             key: 'upload_date',
             width: 100,
             render: (date) => formatDate(date, 'MM/DD'),
+        },
+        {
+            title: '메모',
+            dataIndex: 'memo',
+            key: 'memo',
+            width: 120,
+            render: (memo) => {
+                if (!memo) return '-';
+                
+                const truncatedMemo = memo.length > 25 ? `${memo.substring(0, 25)}...` : memo;
+                
+                return (
+                    <Tooltip title={memo} placement="topLeft">
+                        <span style={{ 
+                            cursor: 'help',
+                            color: '#1890ff'
+                        }}>
+                            {truncatedMemo}
+                        </span>
+                    </Tooltip>
+                );
+            }
         },
         {
             title: '작업',
@@ -500,6 +543,27 @@ const LicenseManagement = () => {
                                 >
                                     {selectedLicense.license.file_name}
                                 </Button>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="메모" span={2}>
+                                {editingModal ? (
+                                    <TextArea
+                                        value={editingValues.memo}
+                                        onChange={(e) => handleModalEditingValueChange('memo', e.target.value)}
+                                        placeholder="License 관련 메모를 입력하세요 (예: 연락 완료, 갱신 예정, 고객 확인 중 등)"
+                                        rows={3}
+                                        maxLength={1000}
+                                        showCount
+                                        style={{ width: '100%' }}
+                                    />
+                                ) : (
+                                    <div style={{ 
+                                        whiteSpace: 'pre-wrap', 
+                                        minHeight: '20px',
+                                        color: selectedLicense.license.memo ? 'inherit' : '#999'
+                                    }}>
+                                        {selectedLicense.license.memo || '메모 없음'}
+                                    </div>
+                                )}
                             </Descriptions.Item>
                         </Descriptions>
                         

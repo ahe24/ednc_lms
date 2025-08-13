@@ -399,11 +399,11 @@ router.get('/:id/content', async (req, res) => {
     }
 });
 
-// License 업데이트 (담당자, 고객명)
+// License 업데이트 (담당자, 고객명, 메모)
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { manager_name, client_name } = req.body;
+        const { manager_name, client_name, memo } = req.body;
 
         // License 존재 확인
         const license = await DatabaseService.get('SELECT * FROM licenses WHERE id = ?', [id]);
@@ -416,9 +416,9 @@ router.put('/:id', async (req, res) => {
         // License 업데이트
         await DatabaseService.run(`
             UPDATE licenses 
-            SET manager_name = ?, client_name = ?
+            SET manager_name = ?, client_name = ?, memo = ?, updated_at = datetime('now', 'localtime')
             WHERE id = ?
-        `, [manager_name || null, client_name || null, id]);
+        `, [manager_name || null, client_name || null, memo || null, id]);
 
         res.json({
             success: true,
@@ -426,7 +426,8 @@ router.put('/:id', async (req, res) => {
             data: {
                 id: id,
                 manager_name: manager_name,
-                client_name: client_name
+                client_name: client_name,
+                memo: memo
             }
         });
 
