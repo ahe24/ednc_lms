@@ -534,38 +534,57 @@ const LicenseManagement = () => {
                             <Descriptions.Item label="업로드일">
                                 {formatDateTime(selectedLicense.license.upload_date)}
                             </Descriptions.Item>
-                            <Descriptions.Item label="파일명">
-                                <Button 
-                                    type="link" 
-                                    style={{ padding: 0, height: 'auto', fontSize: 'inherit' }}
-                                    onClick={() => showLicenseFileContent(selectedLicense.license)}
-                                    loading={loadingFileContent}
-                                >
-                                    {selectedLicense.license.file_name}
-                                </Button>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="메모" span={2}>
-                                {editingModal ? (
-                                    <TextArea
-                                        value={editingValues.memo}
-                                        onChange={(e) => handleModalEditingValueChange('memo', e.target.value)}
-                                        placeholder="License 관련 메모를 입력하세요 (예: 연락 완료, 갱신 예정, 고객 확인 중 등)"
-                                        rows={3}
-                                        maxLength={1000}
-                                        showCount
-                                        style={{ width: '100%' }}
-                                    />
-                                ) : (
-                                    <div style={{ 
-                                        whiteSpace: 'pre-wrap', 
-                                        minHeight: '20px',
-                                        color: selectedLicense.license.memo ? 'inherit' : '#999'
-                                    }}>
-                                        {selectedLicense.license.memo || '메모 없음'}
-                                    </div>
-                                )}
-                            </Descriptions.Item>
                         </Descriptions>
+                        
+                        {/* 파일 정보 카드 */}
+                        <Card 
+                            title="📄 업로드된 파일" 
+                            size="small" 
+                            style={{ marginTop: 16 }}
+                        >
+                            <Button 
+                                type="link" 
+                                style={{ 
+                                    padding: 0, 
+                                    height: 'auto', 
+                                    fontSize: '14px',
+                                    fontWeight: 'normal',
+                                    wordBreak: 'break-all'
+                                }}
+                                onClick={() => showLicenseFileContent(selectedLicense.license)}
+                                loading={loadingFileContent}
+                            >
+                                {selectedLicense.license.file_name}
+                            </Button>
+                        </Card>
+                        
+                        {/* 메모 카드 */}
+                        <Card 
+                            title="📝 메모" 
+                            size="small" 
+                            style={{ marginTop: 16 }}
+                        >
+                            {editingModal ? (
+                                <TextArea
+                                    value={editingValues.memo}
+                                    onChange={(e) => handleModalEditingValueChange('memo', e.target.value)}
+                                    placeholder="License 관련 메모를 입력하세요 (예: 연락 완료, 갱신 예정, 고객 확인 중 등)"
+                                    rows={3}
+                                    maxLength={1000}
+                                    showCount
+                                    style={{ width: '100%' }}
+                                />
+                            ) : (
+                                <div style={{ 
+                                    whiteSpace: 'pre-wrap', 
+                                    minHeight: '20px',
+                                    color: selectedLicense.license.memo ? 'inherit' : '#999',
+                                    lineHeight: '1.6'
+                                }}>
+                                    {selectedLicense.license.memo || '메모 없음'}
+                                </div>
+                            )}
+                        </Card>
                         
                         <Title level={4} style={{ marginTop: 24, marginBottom: 16 }}>
                             피처 목록 ({selectedLicense.features?.length || 0}개)
