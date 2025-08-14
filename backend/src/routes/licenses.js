@@ -179,16 +179,23 @@ router.get('/expiring', async (req, res) => {
                 l.*,
                 s.site_name,
                 s.site_number,
-                (SELECT COUNT(*) FROM license_features lf2 WHERE lf2.license_id = l.id) as feature_count,
-                (SELECT MIN(expiry_date) FROM license_features lf3 WHERE lf3.license_id = l.id) as earliest_expiry,
-                (SELECT MAX(expiry_date) FROM license_features lf4 WHERE lf4.license_id = l.id) as latest_expiry
+                COUNT(lf.id) as feature_count,
+                MIN(lf.expiry_date) as earliest_expiry,
+                MAX(lf.expiry_date) as latest_expiry,
+                SUM(CASE WHEN lf.expiry_date < date('now') THEN 1 ELSE 0 END) as expired_count,
+                SUM(CASE WHEN lf.expiry_date = date('now') THEN 1 ELSE 0 END) as expiring_today_count,
+                SUM(CASE WHEN lf.expiry_date BETWEEN date('now', '+1 day') AND date('now', '+7 days') THEN 1 ELSE 0 END) as expiring_week_count,
+                SUM(CASE WHEN lf.expiry_date BETWEEN date('now', '+8 days') AND date('now', '+30 days') THEN 1 ELSE 0 END) as expiring_month_count,
+                SUM(CASE WHEN lf.expiry_date > date('now', '+30 days') THEN 1 ELSE 0 END) as active_count
             FROM licenses l
             LEFT JOIN sites s ON l.site_id = s.id
+            LEFT JOIN license_features lf ON l.id = lf.license_id
             WHERE EXISTS (
                 SELECT 1 FROM license_features lf5 
                 WHERE lf5.license_id = l.id 
                 AND lf5.expiry_date BETWEEN ? AND ?
             )
+            GROUP BY l.id
             ORDER BY earliest_expiry ASC
         `, [today, futureDate]);
 
@@ -268,7 +275,12 @@ router.get('/', async (req, res) => {
                 s.site_number,
                 COUNT(lf.id) as feature_count,
                 MIN(lf.expiry_date) as earliest_expiry,
-                MAX(lf.expiry_date) as latest_expiry
+                MAX(lf.expiry_date) as latest_expiry,
+                SUM(CASE WHEN lf.expiry_date < date('now') THEN 1 ELSE 0 END) as expired_count,
+                SUM(CASE WHEN lf.expiry_date = date('now') THEN 1 ELSE 0 END) as expiring_today_count,
+                SUM(CASE WHEN lf.expiry_date BETWEEN date('now', '+1 day') AND date('now', '+7 days') THEN 1 ELSE 0 END) as expiring_week_count,
+                SUM(CASE WHEN lf.expiry_date BETWEEN date('now', '+8 days') AND date('now', '+30 days') THEN 1 ELSE 0 END) as expiring_month_count,
+                SUM(CASE WHEN lf.expiry_date > date('now', '+30 days') THEN 1 ELSE 0 END) as active_count
             FROM licenses l
             LEFT JOIN sites s ON l.site_id = s.id
             LEFT JOIN license_features lf ON l.id = lf.license_id

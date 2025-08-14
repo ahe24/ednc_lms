@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
-import { formatDate, formatDateTime, getExpiryStatus } from '../config/locale';
+import { formatDate, formatDateTime, getExpiryStatus, getMixedExpiryStatus } from '../config/locale';
 
 const { Title, Text } = Typography;
 
@@ -138,15 +138,18 @@ const Dashboard = () => {
             render: (date) => formatDate(date, 'MM/DD'),
         },
         {
-            title: '상태',
+            title: '만료 상태',
             key: 'status',
-            width: 100,
+            width: 120,
             render: (_, record) => {
-                const status = getExpiryStatus(record.earliest_expiry);
+                if (!record.feature_count) return '-';
+                const mixedStatus = getMixedExpiryStatus(record);
                 return (
-                    <Tag color={status.color} icon={<ClockCircleOutlined />}>
-                        {status.text}
-                    </Tag>
+                    <Tooltip title={mixedStatus.tooltip} placement="topLeft">
+                        <Tag color={mixedStatus.color} icon={<ClockCircleOutlined />}>
+                            {mixedStatus.icon} {mixedStatus.text}
+                        </Tag>
+                    </Tooltip>
                 );
             }
         },

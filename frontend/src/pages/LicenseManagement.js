@@ -27,7 +27,7 @@ import {
 } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../config/api';
-import { formatDate, formatDateTime, getExpiryStatus } from '../config/locale';
+import { formatDate, formatDateTime, getExpiryStatus, getMixedExpiryStatus } from '../config/locale';
 
 const { Search, TextArea } = Input;
 const { Option } = Select;
@@ -228,19 +228,25 @@ const LicenseManagement = () => {
             ellipsis: true,
         },
         {
-            title: '만료일',
-            dataIndex: 'earliest_expiry',
-            key: 'earliest_expiry',
-            width: 120,
-            render: (date) => {
-                if (!date) return '-';
-                const status = getExpiryStatus(date);
+            title: '만료 상태',
+            key: 'expiry_status',
+            width: 140,
+            render: (_, record) => {
+                if (!record.feature_count) return '-';
+                const mixedStatus = getMixedExpiryStatus(record);
                 return (
                     <div>
-                        <div>{formatDate(date, 'MM/DD')}</div>
-                        <Tag color={status.color} size="small">
-                            {status.text}
-                        </Tag>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                            {formatDate(record.earliest_expiry, 'MM/DD')}
+                        </div>
+                        <Tooltip title={mixedStatus.tooltip} placement="topLeft">
+                            <Tag color={mixedStatus.color} size="small">
+                                {mixedStatus.icon} {mixedStatus.text}
+                            </Tag>
+                        </Tooltip>
+                        <div style={{ fontSize: '11px', color: '#999' }}>
+                            {mixedStatus.description}
+                        </div>
                     </div>
                 );
             }
