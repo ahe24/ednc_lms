@@ -34,9 +34,11 @@ class LicenseParser {
             
             // Host ID 추출 (더 유연한 패턴)
             const hostIdMatch = fileContent.match(/HOSTID=FLEXID=([^\s]+)/) ||
+                               fileContent.match(/FLEXID=([^\s]+)/) ||
                                fileContent.match(/HOSTID=([^\s]+)/) ||
                                fileContent.match(/HOST=([^\s]+)/) ||
-                               fileContent.match(/SERVER\s+[^\s]+\s+([A-F0-9]{12})\s+\d+/);
+                               fileContent.match(/SERVER\s+[^\s]+\s+FLEXID=([^\s]+)/) ||
+                               fileContent.match(/SERVER\s+[^\s]+\s+([A-F0-9-]{8,})\s+\d+/);
             
             if (hostIdMatch) {
                 result.siteInfo.hostId = hostIdMatch[1];
@@ -47,6 +49,10 @@ class LicenseParser {
             if (contentSection) {
                 result.partInfo = this.parsePartInfo(contentSection);
                 result.features = this.parseFeatures(contentSection);
+            } else {
+                // License Content 섹션이 없는 경우 전체 파일에서 파싱
+                result.partInfo = this.parsePartInfo(fileContent);
+                result.features = this.parseFeatures(fileContent);
             }
             
             return result;
@@ -124,15 +130,15 @@ class LicenseParser {
             });
         }
         
-        // 대체 패턴: INCREMENT 라인 파싱
+        // INCREMENT 라인 파싱 (새로운 FlexLM 형식)
         if (features.length === 0) {
-            const incrementRegex = /INCREMENT\s+(\w+)\s+[\w\d]+\s+([\d.]+)\s+(\d{2}-\w{3}-\d{4})/g;
+            const incrementRegex = /INCREMENT\s+(\w+)\s+\S+\s+([\d.]+)\s+(\d{2}-\w{3}-\d{4})/g;
             while ((match = incrementRegex.exec(contentSection)) !== null) {
                 features.push({
                     featureName: match[1],
                     version: match[2],
-                    startDate: this.parseDate(match[3]),
-                    expiryDate: this.parseDate(match[3]), // 기본값으로 시작일과 동일
+                    startDate: new Date().toISOString().split('T')[0], // 현재 날짜를 시작일로
+                    expiryDate: this.parseDate(match[3]),
                     serialNumber: ''
                 });
             }

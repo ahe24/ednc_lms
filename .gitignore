@@ -224,3 +224,4 @@ coverage/
 .pnp.* 
 .claude/settings.local.json
 .claude/
+test_temp/
