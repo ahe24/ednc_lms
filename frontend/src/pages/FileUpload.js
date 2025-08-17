@@ -302,15 +302,30 @@ const FileUpload = () => {
                                         <Text strong>사이트 정보:</Text>
                                         <Text>{uploadResult.data.summary.siteInfo.siteName}</Text>
                                         
-                                        <Text strong>제품명:</Text>
-                                        <Text>{uploadResult.data.summary.partInfo.partName}</Text>
+                                        <Text strong>제품 수:</Text>
+                                        <Text>{uploadResult.data.productCount}개</Text>
                                         
-                                        <Text strong>Feature 수:</Text>
-                                        <Text>{uploadResult.data.summary.totalFeatures}개</Text>
+                                        {uploadResult.data.products && uploadResult.data.products.length > 0 && (
+                                            <>
+                                                <Text strong>제품 목록:</Text>
+                                                <div style={{ marginLeft: 8 }}>
+                                                    {uploadResult.data.products.map((product, index) => (
+                                                        <div key={index} style={{ marginBottom: 4 }}>
+                                                            <Text style={{ fontSize: '12px' }}>
+                                                                • {product.productName} ({product.features?.length || 0}개 기능)
+                                                            </Text>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                        
+                                        <Text strong>총 Feature 수:</Text>
+                                        <Text>{uploadResult.data.totalFeatures}개</Text>
                                         
                                         <Alert
                                             message="License가 성공적으로 등록되었습니다"
-                                            description="License 관리 메뉴에서 상세 정보를 확인할 수 있습니다."
+                                            description={`${uploadResult.data.productCount}개 제품이 개별적으로 등록되었습니다. License 관리 메뉴에서 상세 정보를 확인할 수 있습니다.`}
                                             type="success"
                                             showIcon
                                             style={{ marginTop: 16 }}
