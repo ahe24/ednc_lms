@@ -6,7 +6,7 @@ class LicenseParser {
     static parseLicenseFile(fileContent) {
         const result = {
             siteInfo: {},
-            partInfo: {},
+            products: [],
             features: []
         };
         
@@ -44,14 +44,18 @@ class LicenseParser {
                 result.siteInfo.hostId = hostIdMatch[1];
             }
             
-            // License Content 섹션에서 Part 정보 및 Feature 추출
+            // License Content 섹션에서 모든 제품 및 Feature 추출
             const contentSection = this.extractLicenseContent(fileContent);
             if (contentSection) {
-                result.partInfo = this.parsePartInfo(contentSection);
-                result.features = this.parseFeatures(contentSection);
+                const parsedProducts = this.parseAllProducts(contentSection);
+                result.products = parsedProducts.products;
+                result.features = parsedProducts.features;
             } else {
-                // License Content 섹션이 없는 경우 전체 파일에서 파싱
-                result.partInfo = this.parsePartInfo(fileContent);
+                // License Content 섹션이 없는 경우 기존 방식으로 파싱
+                const legacyProduct = this.parsePartInfo(fileContent);
+                if (legacyProduct.partNumber) {
+                    result.products = [legacyProduct];
+                }
                 result.features = this.parseFeatures(fileContent);
             }
             
@@ -87,6 +91,102 @@ class LicenseParser {
         return fileContent.substring(startIndex, endIndex);
     }
     
+    // 모든 제품과 기능 파싱 (새로운 메소드)
+    static parseAllProducts(contentSection) {
+        const products = [];
+        const features = [];
+        const lines = contentSection.split('\n');
+        
+        let currentProduct = null;
+        let currentProductIndex = 0;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 제품 라인 매칭: # 252991           HDL Designer  Ap SW                        1
+            const productMatch = line.match(/^#\s+(\d+)\s+(.+?)\s+(\d+)\s*$/);
+            if (productMatch) {
+                // 이전 제품의 상태 계산
+                if (currentProduct && currentProduct.features.length > 0) {
+                    const status = this.calculateProductStatus(currentProduct.features);
+                    currentProduct.earliestExpiry = status.earliestExpiry;
+                    currentProduct.latestExpiry = status.latestExpiry;
+                    currentProduct.status = status.status;
+                    products.push(currentProduct);
+                }
+                
+                // 새 제품 시작
+                currentProduct = {
+                    partNumber: productMatch[1].trim(),
+                    productName: productMatch[2].trim(),
+                    quantity: parseInt(productMatch[3]),
+                    features: [],
+                    productIndex: currentProductIndex++
+                };
+            }
+            
+            // 기능 라인 매칭: #         hdldesigner_c             2015.09     01 Sep 2021  06 Dec 2025  294020332
+            const featureMatch = line.match(/^#\s+([a-zA-Z_0-9]+)\s+([0-9.]+)\s+(\d{2}\s+\w{3}\s+\d{4})\s+(\d{2}\s+\w{3}\s+\d{4})\s+(\d+)\s*$/);
+            if (featureMatch && currentProduct) {
+                const feature = {
+                    featureName: featureMatch[1].trim(),
+                    version: featureMatch[2].trim(),
+                    startDate: this.parseDate(featureMatch[3].trim()),
+                    expiryDate: this.parseDate(featureMatch[4].trim()),
+                    serialNumber: featureMatch[5].trim(),
+                    productIndex: currentProduct.productIndex
+                };
+                
+                currentProduct.features.push(feature);
+                features.push(feature);
+            }
+        }
+        
+        // 마지막 제품 처리
+        if (currentProduct && currentProduct.features.length > 0) {
+            const status = this.calculateProductStatus(currentProduct.features);
+            currentProduct.earliestExpiry = status.earliestExpiry;
+            currentProduct.latestExpiry = status.latestExpiry;
+            currentProduct.status = status.status;
+            products.push(currentProduct);
+        }
+        
+        return { products, features };
+    }
+    
+    // 제품 상태 계산 (새로운 메소드)
+    static calculateProductStatus(features) {
+        const today = new Date();
+        const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+        
+        let earliestExpiry = null;
+        let latestExpiry = null;
+        let status = 'active';
+        
+        features.forEach(feature => {
+            const expiryDate = new Date(feature.expiryDate);
+            
+            if (!earliestExpiry || expiryDate < earliestExpiry) {
+                earliestExpiry = expiryDate;
+            }
+            if (!latestExpiry || expiryDate > latestExpiry) {
+                latestExpiry = expiryDate;
+            }
+            
+            if (expiryDate < today) {
+                status = 'expired';
+            } else if (expiryDate < thirtyDaysFromNow && status !== 'expired') {
+                status = 'warning';
+            }
+        });
+        
+        return { 
+            earliestExpiry: earliestExpiry ? earliestExpiry.toISOString().split('T')[0] : null,
+            latestExpiry: latestExpiry ? latestExpiry.toISOString().split('T')[0] : null,
+            status 
+        };
+    }
+
     static parsePartInfo(contentSection) {
         // Part 정보 패턴: # 숫자 제품명 숫자
         const partMatch = contentSection.match(/# (\d+)\s+(.+?)\s+(\d+)/);

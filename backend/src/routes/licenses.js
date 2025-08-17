@@ -89,39 +89,107 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 site = { id: siteResult.id };
             }
 
-            // License 정보 저장
-            const licenseResult = await DatabaseService.run(`
-                INSERT INTO licenses (
-                    site_id, host_id, part_number, part_name, file_name, 
-                    manager_name, department, client_name, upload_date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
-            `, [
-                site.id,
-                parsedData.siteInfo.hostId,
-                parsedData.partInfo.partNumber,
-                parsedData.partInfo.partName,
-                req.file.filename,
-                managerName || null,
-                department || null,
-                clientName || null
-            ]);
+            // 다중 제품 처리
+            const licenseResults = [];
+            const productResults = [];
 
-            // Feature 정보 저장
-            for (const feature of parsedData.features) {
-                await DatabaseService.run(`
-                    INSERT INTO license_features (
-                        license_id, feature_name, version, start_date, 
-                        expiry_date, serial_number, status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            if (parsedData.products && parsedData.products.length > 0) {
+                // 새로운 방식: 제품별로 라이선스 생성
+                for (const product of parsedData.products) {
+                    // License 정보 저장 (제품별)
+                    const licenseResult = await DatabaseService.run(`
+                        INSERT INTO licenses (
+                            site_id, host_id, part_number, part_name, file_name, 
+                            manager_name, department, client_name, upload_date
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+                    `, [
+                        site.id,
+                        parsedData.siteInfo.hostId,
+                        product.partNumber,
+                        product.productName,
+                        req.file.filename,
+                        managerName || null,
+                        department || null,
+                        clientName || null
+                    ]);
+
+                    licenseResults.push(licenseResult);
+
+                    // Product 정보 저장
+                    const productResult = await DatabaseService.run(`
+                        INSERT INTO products (
+                            license_id, part_number, product_name, quantity,
+                            earliest_expiry_date, latest_expiry_date, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        licenseResult.id,
+                        product.partNumber,
+                        product.productName,
+                        product.quantity,
+                        product.earliestExpiry,
+                        product.latestExpiry,
+                        product.status
+                    ]);
+
+                    productResults.push({ ...productResult, product });
+
+                    // 해당 제품의 Feature 정보 저장
+                    for (const feature of product.features) {
+                        await DatabaseService.run(`
+                            INSERT INTO license_features (
+                                license_id, product_id, feature_name, version, start_date, 
+                                expiry_date, serial_number, status
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        `, [
+                            licenseResult.id,
+                            productResult.id,
+                            feature.featureName,
+                            feature.version,
+                            feature.startDate,
+                            feature.expiryDate,
+                            feature.serialNumber,
+                            'ACTIVE'
+                        ]);
+                    }
+                }
+            } else {
+                // 기존 방식: 단일 제품 처리 (backward compatibility)
+                const legacyProduct = parsedData.partInfo;
+                const licenseResult = await DatabaseService.run(`
+                    INSERT INTO licenses (
+                        site_id, host_id, part_number, part_name, file_name, 
+                        manager_name, department, client_name, upload_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
                 `, [
-                    licenseResult.id,
-                    feature.featureName,
-                    feature.version,
-                    feature.startDate,
-                    feature.expiryDate,
-                    feature.serialNumber,
-                    'ACTIVE'
+                    site.id,
+                    parsedData.siteInfo.hostId,
+                    legacyProduct.partNumber,
+                    legacyProduct.partName,
+                    req.file.filename,
+                    managerName || null,
+                    department || null,
+                    clientName || null
                 ]);
+
+                licenseResults.push(licenseResult);
+
+                // Feature 정보 저장
+                for (const feature of parsedData.features) {
+                    await DatabaseService.run(`
+                        INSERT INTO license_features (
+                            license_id, feature_name, version, start_date, 
+                            expiry_date, serial_number, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        licenseResult.id,
+                        feature.featureName,
+                        feature.version,
+                        feature.startDate,
+                        feature.expiryDate,
+                        feature.serialNumber,
+                        'ACTIVE'
+                    ]);
+                }
             }
 
             await DatabaseService.run('COMMIT');
@@ -133,10 +201,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 success: true,
                 message: 'License 파일이 성공적으로 업로드되었습니다',
                 data: {
-                    licenseId: licenseResult.id,
+                    licenseIds: licenseResults.map(r => r.id),
+                    productCount: parsedData.products ? parsedData.products.length : 1,
+                    totalFeatures: parsedData.features ? parsedData.features.length : 0,
                     fileName: req.file.filename,
                     uploadTime: moment().format('YYYY년 MM월 DD일 HH시 mm분'),
-                    summary: summary
+                    summary: summary,
+                    products: parsedData.products || [parsedData.partInfo]
                 }
             });
 
@@ -497,6 +568,146 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({
             error: '서버 오류',
             message: 'License 삭제 중 오류가 발생했습니다'
+        });
+    }
+});
+
+// 제품별 라이선스 조회 (새로운 API)
+router.get('/products', async (req, res) => {
+    try {
+        const { page = 1, limit = 20, siteId, status, search } = req.query;
+        const offset = (page - 1) * limit;
+
+        let whereClause = 'WHERE 1=1';
+        let params = [];
+
+        if (siteId) {
+            whereClause += ' AND l.site_id = ?';
+            params.push(siteId);
+        }
+
+        if (search) {
+            whereClause += ' AND (p.product_name LIKE ? OR p.part_number LIKE ? OR l.client_name LIKE ? OR s.site_name LIKE ?)';
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+
+        // 상태 필터링
+        if (status) {
+            if (status === 'expired') {
+                whereClause += ' AND p.status = ?';
+                params.push('expired');
+            } else if (status === 'warning') {
+                whereClause += ' AND p.status = ?';
+                params.push('warning');
+            } else if (status === 'active') {
+                whereClause += ' AND p.status = ?';
+                params.push('active');
+            }
+        }
+
+        const query = `
+            SELECT 
+                p.*,
+                l.file_name,
+                l.manager_name,
+                l.client_name,
+                l.upload_date,
+                s.site_name,
+                s.site_number,
+                COUNT(lf.id) as feature_count
+            FROM products p
+            LEFT JOIN licenses l ON p.license_id = l.id
+            LEFT JOIN sites s ON l.site_id = s.id
+            LEFT JOIN license_features lf ON p.id = lf.product_id
+            ${whereClause}
+            GROUP BY p.id
+            ORDER BY p.earliest_expiry_date ASC
+            LIMIT ? OFFSET ?
+        `;
+
+        const products = await DatabaseService.all(query, [...params, parseInt(limit), offset]);
+
+        // 총 개수 조회
+        const countQuery = `
+            SELECT COUNT(DISTINCT p.id) as total
+            FROM products p
+            LEFT JOIN licenses l ON p.license_id = l.id
+            LEFT JOIN sites s ON l.site_id = s.id
+            ${whereClause}
+        `;
+        const countResult = await DatabaseService.get(countQuery, params);
+
+        res.json({
+            success: true,
+            data: {
+                products: products,
+                totalCount: countResult.total,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(countResult.total / limit),
+                hasNext: offset + products.length < countResult.total,
+                hasPrev: page > 1
+            }
+        });
+
+    } catch (error) {
+        console.error('제품별 라이선스 조회 오류:', error);
+        res.status(500).json({
+            error: '서버 오류',
+            message: '제품별 라이선스 조회 중 오류가 발생했습니다'
+        });
+    }
+});
+
+// 특정 제품의 기능 상세 조회
+router.get('/products/:id/features', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await DatabaseService.get(`
+            SELECT 
+                p.*,
+                l.file_name,
+                l.manager_name,
+                l.client_name,
+                s.site_name,
+                s.site_number
+            FROM products p
+            LEFT JOIN licenses l ON p.license_id = l.id
+            LEFT JOIN sites s ON l.site_id = s.id
+            WHERE p.id = ?
+        `, [id]);
+
+        if (!product) {
+            return res.status(404).json({
+                error: '제품을 찾을 수 없습니다'
+            });
+        }
+
+        const features = await DatabaseService.all(
+            'SELECT * FROM license_features WHERE product_id = ? ORDER BY expiry_date',
+            [id]
+        );
+
+        // 각 feature에 만료 상태 추가
+        const featuresWithStatus = features.map(feature => ({
+            ...feature,
+            status: LicenseParser.calculateLicenseStatus(feature.expiry_date)
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                product: product,
+                features: featuresWithStatus
+            }
+        });
+
+    } catch (error) {
+        console.error('제품 기능 상세 조회 오류:', error);
+        res.status(500).json({
+            error: '서버 오류',
+            message: '제품 기능 상세 정보 조회 중 오류가 발생했습니다'
         });
     }
 });
