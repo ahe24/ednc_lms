@@ -26,6 +26,7 @@ import { formatDateTime } from '../config/locale';
 const { Dragger } = Upload;
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
 
 const FileUpload = () => {
     const [form] = Form.useForm();
