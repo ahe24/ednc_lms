@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { message } from 'antd';
 import { LocaleProvider } from './config/locale';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -7,6 +8,17 @@ import Dashboard from './pages/Dashboard';
 import LicenseManagement from './pages/LicenseManagement';
 import FileUpload from './pages/FileUpload';
 import './App.css';
+
+// Configure message notifications to appear in bottom-right
+message.config({
+  top: undefined,
+  bottom: 24,
+  duration: 3,
+  maxCount: 3,
+  rtl: false,
+  prefixCls: 'ant-message',
+  getContainer: () => document.body,
+});
 
 function App() {
   return (
