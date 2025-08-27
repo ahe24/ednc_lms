@@ -46,7 +46,8 @@ const LicenseManagement = () => {
     const [filters, setFilters] = useState({
         search: '',
         department: '',
-        status: ''
+        status: '',
+        days: ''
     });
     const [selectedLicense, setSelectedLicense] = useState(null);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -63,13 +64,11 @@ const LicenseManagement = () => {
         const urlDays = searchParams.get('days');
         
         if (urlStatus) {
-            setFilters(prev => ({ ...prev, status: urlStatus }));
-        }
-        
-        // Handle days parameter for expiring filters
-        if (urlStatus === 'expiring' && urlDays) {
-            // For now, we'll just use the status filter as the backend should handle this
-            // You might want to pass the days parameter to the backend if it supports it
+            setFilters(prev => ({ 
+                ...prev, 
+                status: urlStatus,
+                days: urlDays || '' 
+            }));
         }
     }, [searchParams]);
     
@@ -90,7 +89,8 @@ const LicenseManagement = () => {
                 limit: pagination.pageSize,
                 ...(filters.search && { search: filters.search }),
                 ...(filters.department && { department: filters.department }),
-                ...(filters.status && { status: filters.status })
+                ...(filters.status && { status: filters.status }),
+                ...(filters.days && { days: filters.days })
             };
             
             const response = await apiClient.get('/api/licenses', { params });
