@@ -35,28 +35,39 @@ router.get('/summary', async (req, res) => {
                 GROUP BY department
             `),
             
-            // 30일 내 만료 예정
+            // 30일 내 만료 예정 (today <= expiry < today+30days)
             DatabaseService.get(`
                 SELECT COUNT(DISTINCT l.id) as count 
                 FROM licenses l
-                LEFT JOIN license_features lf ON l.id = lf.license_id
-                WHERE lf.expiry_date BETWEEN date('now') AND date('now', '+30 days')
+                WHERE EXISTS (
+                    SELECT 1 FROM license_features lf 
+                    WHERE lf.license_id = l.id 
+                    AND lf.expiry_date >= date('now')
+                    AND lf.expiry_date < date('now', '+30 days')
+                )
             `),
             
-            // 7일 내 만료 예정
+            // 7일 내 만료 예정 (today <= expiry < today+7days)
             DatabaseService.get(`
                 SELECT COUNT(DISTINCT l.id) as count 
                 FROM licenses l
-                LEFT JOIN license_features lf ON l.id = lf.license_id
-                WHERE lf.expiry_date BETWEEN date('now') AND date('now', '+7 days')
+                WHERE EXISTS (
+                    SELECT 1 FROM license_features lf 
+                    WHERE lf.license_id = l.id 
+                    AND lf.expiry_date >= date('now')
+                    AND lf.expiry_date < date('now', '+7 days')
+                )
             `),
             
-            // 이미 만료된 것
+            // 이미 만료된 것 (expiry < today)
             DatabaseService.get(`
                 SELECT COUNT(DISTINCT l.id) as count 
                 FROM licenses l
-                LEFT JOIN license_features lf ON l.id = lf.license_id
-                WHERE lf.expiry_date < date('now')
+                WHERE EXISTS (
+                    SELECT 1 FROM license_features lf 
+                    WHERE lf.license_id = l.id 
+                    AND lf.expiry_date < date('now')
+                )
             `)
         ]);
 

@@ -300,7 +300,7 @@ router.get('/expiring', async (req, res) => {
 // License 목록 조회
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 20, siteId, department, status, search } = req.query;
+        const { page = 1, limit = 20, siteId, department, status, search, days } = req.query;
         const offset = (page - 1) * limit;
 
         let whereClause = 'WHERE 1=1';
@@ -325,17 +325,18 @@ router.get('/', async (req, res) => {
         // 상태 필터링 조건 추가
         if (status) {
             const today = moment().format('YYYY-MM-DD');
-            const thirtyDaysFromNow = moment().add(30, 'days').format('YYYY-MM-DD');
+            const daysParam = days ? parseInt(days) : 30; // Default to 30 days if not specified
+            const futureDaysFromNow = moment().add(daysParam, 'days').format('YYYY-MM-DD');
             
             if (status === 'expired') {
                 whereClause += ' AND EXISTS (SELECT 1 FROM license_features lf_status WHERE lf_status.license_id = l.id AND lf_status.expiry_date < ?)';
                 params.push(today);
             } else if (status === 'expiring') {
                 whereClause += ' AND EXISTS (SELECT 1 FROM license_features lf_status WHERE lf_status.license_id = l.id AND lf_status.expiry_date >= ? AND lf_status.expiry_date < ?)';
-                params.push(today, thirtyDaysFromNow);
+                params.push(today, futureDaysFromNow);
             } else if (status === 'active') {
                 whereClause += ' AND EXISTS (SELECT 1 FROM license_features lf_status WHERE lf_status.license_id = l.id AND lf_status.expiry_date >= ?)';
-                params.push(thirtyDaysFromNow);
+                params.push(futureDaysFromNow);
             }
         }
 

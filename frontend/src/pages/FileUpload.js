@@ -203,8 +203,9 @@ const FileUpload = () => {
                                     <Form.Item 
                                         label="부서" 
                                         name="department"
+                                        initialValue="EDA"
                                     >
-                                        <Select placeholder="부서를 선택하세요 (선택사항)" allowClear>
+                                        <Select placeholder="부서를 선택하세요" allowClear>
                                             <Option value="EDA">EDA</Option>
                                             <Option value="PADS">PADS</Option>
                                             <Option value="CAD">CAD</Option>
