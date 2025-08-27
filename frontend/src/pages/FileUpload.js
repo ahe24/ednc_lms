@@ -193,6 +193,14 @@ const FileUpload = () => {
                             <Row gutter={16}>
                                 <Col xs={24} sm={8}>
                                     <Form.Item 
+                                        label="고객명" 
+                                        name="clientName"
+                                    >
+                                        <Input placeholder="고객명을 입력하세요 (선택사항)" />
+                                    </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={8}>
+                                    <Form.Item 
                                         label="담당자명" 
                                         name="managerName"
                                     >
@@ -211,14 +219,6 @@ const FileUpload = () => {
                                             <Option value="CAD">CAD</Option>
                                             <Option value="기타">기타</Option>
                                         </Select>
-                                    </Form.Item>
-                                </Col>
-                                <Col xs={24} sm={8}>
-                                    <Form.Item 
-                                        label="고객명" 
-                                        name="clientName"
-                                    >
-                                        <Input placeholder="고객명을 입력하세요 (선택사항)" />
                                     </Form.Item>
                                 </Col>
                             </Row>
