@@ -12,9 +12,10 @@ class LicenseParser {
         
         try {
             // Site 정보 추출 (더 유연한 패턴)
-            const siteMatch = fileContent.match(/# (.+)\s+Site # :(\d+)=(.+)/) || 
-                             fileContent.match(/Site # :(\d+)/) ||
-                             fileContent.match(/SITE # :(\d+)/);
+            const siteMatch = fileContent.match(/# (.+)\s+Site # :?(\d+)=(.+)/) || 
+                             fileContent.match(/Site # :?(\d+)=(.+)/) ||
+                             fileContent.match(/Site # :?(\d+)/) ||
+                             fileContent.match(/SITE # :?(\d+)/);
             
             if (siteMatch) {
                 if (siteMatch.length >= 4) {
@@ -23,13 +24,27 @@ class LicenseParser {
                         siteNumber: siteMatch[2],
                         fullSiteName: siteMatch[3].trim()
                     };
+                } else if (siteMatch.length === 3 && siteMatch[2]) {
+                    // Site # 137716=ED&C, Ltd. 형태
+                    result.siteInfo = {
+                        siteName: siteMatch[2].trim(),
+                        siteNumber: siteMatch[1],
+                        fullSiteName: siteMatch[2].trim()
+                    };
                 } else {
                     result.siteInfo = {
                         siteName: 'Unknown Site',
-                        siteNumber: siteMatch[1],
+                        siteNumber: siteMatch[1] || '000000',
                         fullSiteName: 'Unknown Corporation'
                     };
                 }
+            } else {
+                // Site 정보를 전혀 찾을 수 없는 경우 기본값 설정
+                result.siteInfo = {
+                    siteName: 'Unknown Site',
+                    siteNumber: '000000',
+                    fullSiteName: 'Unknown Corporation'
+                };
             }
             
             // Host ID 추출 (더 유연한 패턴)
@@ -38,7 +53,8 @@ class LicenseParser {
                                fileContent.match(/HOSTID=([^\s]+)/) ||
                                fileContent.match(/HOST=([^\s]+)/) ||
                                fileContent.match(/SERVER\s+[^\s]+\s+FLEXID=([^\s]+)/) ||
-                               fileContent.match(/SERVER\s+[^\s]+\s+([A-F0-9-]{8,})\s+\d+/);
+                               fileContent.match(/SERVER\s+[^\s]+\s+([A-F0-9]{8,})\s+\d+/) ||
+                               fileContent.match(/SERVER\s+\S+\s+([A-F0-9]{8,})\s/);
             
             if (hostIdMatch) {
                 result.siteInfo.hostId = hostIdMatch[1];
