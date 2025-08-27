@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Alert, Table, Tag, Typography, Button, Spin, Modal, Descriptions, message, Tooltip } from 'antd';
+import { Row, Col, Card, Statistic, Alert, Table, Tag, Typography, Button, Spin, Modal, Descriptions, message, Tooltip, Input } from 'antd';
 import { 
     FileTextOutlined, 
     ExclamationCircleOutlined, 
     CheckCircleOutlined,
     ClockCircleOutlined,
-    ReloadOutlined
+    ReloadOutlined,
+    EditOutlined,
+    SaveOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { formatDate, formatDateTime, getExpiryStatus, getMixedExpiryStatus } from '../config/locale';
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -25,6 +28,8 @@ const Dashboard = () => {
     const [fileContentModalVisible, setFileContentModalVisible] = useState(false);
     const [fileContent, setFileContent] = useState(null);
     const [loadingFileContent, setLoadingFileContent] = useState(false);
+    const [editingModal, setEditingModal] = useState(false);
+    const [editingValues, setEditingValues] = useState({});
     
     useEffect(() => {
         loadDashboardData();
@@ -80,6 +85,52 @@ const Dashboard = () => {
         } finally {
             setLoadingFileContent(false);
         }
+    };
+    
+    const startModalEditing = () => {
+        setEditingModal(true);
+        setEditingValues({
+            manager_name: selectedLicense.license.manager_name || '',
+            client_name: selectedLicense.license.client_name || '',
+            memo: selectedLicense.license.memo || ''
+        });
+    };
+    
+    const cancelModalEditing = () => {
+        setEditingModal(false);
+        setEditingValues({});
+    };
+    
+    const saveModalEditing = async () => {
+        try {
+            const updateData = {
+                manager_name: editingValues.manager_name,
+                client_name: editingValues.client_name,
+                memo: editingValues.memo
+            };
+            
+            await apiClient.put(`/api/licenses/${selectedLicense.license.id}`, updateData);
+            message.success('License 정보가 업데이트되었습니다');
+            setEditingModal(false);
+            setEditingValues({});
+            
+            // Refresh the selected license data
+            const response = await apiClient.get(`/api/licenses/${selectedLicense.license.id}`);
+            setSelectedLicense(response.data.data);
+            
+            // Refresh the dashboard data
+            loadDashboardData();
+        } catch (error) {
+            console.error('License 업데이트 실패:', error);
+            message.error('License 정보 업데이트에 실패했습니다');
+        }
+    };
+    
+    const handleModalEditingValueChange = (field, value) => {
+        setEditingValues(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
     
     const navigateToLicenseManagement = (filterType) => {
@@ -334,20 +385,55 @@ const Dashboard = () => {
                 onCancel={() => {
                     setDetailModalVisible(false);
                     setShowAllFeatures(false);
+                    setEditingModal(false);
+                    setEditingValues({});
                 }}
-                footer={[
-                    <Button key="close" onClick={() => {
-                        setDetailModalVisible(false);
-                        setShowAllFeatures(false);
-                    }}>
-                        닫기
-                    </Button>
-                ]}
+                footer={null}
                 width={800}
             >
                 {selectedLicense && (
                     <div>
-                        <Descriptions title="기본 정보" bordered column={2} size="small">
+                        {/* 상단 버튼 영역 */}
+                        <div style={{ 
+                            marginBottom: 24, 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center' 
+                        }}>
+                            <Title level={4} style={{ margin: 0 }}>
+                                기본 정보
+                            </Title>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {editingModal ? (
+                                    <>
+                                        <Button onClick={cancelModalEditing}>
+                                            취소
+                                        </Button>
+                                        <Button 
+                                            type="primary" 
+                                            icon={<SaveOutlined />}
+                                            onClick={saveModalEditing}
+                                        >
+                                            저장
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button icon={<EditOutlined />} onClick={startModalEditing}>
+                                            편집
+                                        </Button>
+                                        <Button onClick={() => {
+                                            setDetailModalVisible(false);
+                                            setShowAllFeatures(false);
+                                        }}>
+                                            닫기
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <Descriptions bordered column={2} size="small">
                             <Descriptions.Item label="사이트명">
                                 {selectedLicense.license.site_name}
                             </Descriptions.Item>
@@ -364,13 +450,33 @@ const Dashboard = () => {
                                 {selectedLicense.license.host_id}
                             </Descriptions.Item>
                             <Descriptions.Item label="담당자">
-                                {selectedLicense.license.manager_name || '-'}
+                                {editingModal ? (
+                                    <Input
+                                        value={editingValues.manager_name}
+                                        onChange={(e) => handleModalEditingValueChange('manager_name', e.target.value)}
+                                        placeholder="담당자 입력"
+                                        size="small"
+                                        style={{ maxWidth: '200px' }}
+                                    />
+                                ) : (
+                                    selectedLicense.license.manager_name || '-'
+                                )}
                             </Descriptions.Item>
                             <Descriptions.Item label="부서">
                                 {selectedLicense.license.department || '-'}
                             </Descriptions.Item>
                             <Descriptions.Item label="고객명">
-                                {selectedLicense.license.client_name || '-'}
+                                {editingModal ? (
+                                    <Input
+                                        value={editingValues.client_name}
+                                        onChange={(e) => handleModalEditingValueChange('client_name', e.target.value)}
+                                        placeholder="고객명 입력"
+                                        size="small"
+                                        style={{ maxWidth: '200px' }}
+                                    />
+                                ) : (
+                                    selectedLicense.license.client_name || '-'
+                                )}
                             </Descriptions.Item>
                             <Descriptions.Item label="업로드일">
                                 {formatDateTime(selectedLicense.license.upload_date)}
@@ -405,14 +511,26 @@ const Dashboard = () => {
                             size="small" 
                             style={{ marginTop: 16 }}
                         >
-                            <div style={{ 
-                                whiteSpace: 'pre-wrap', 
-                                minHeight: '20px',
-                                color: selectedLicense.license.memo ? 'inherit' : '#999',
-                                lineHeight: '1.6'
-                            }}>
-                                {selectedLicense.license.memo || '메모 없음'}
-                            </div>
+                            {editingModal ? (
+                                <TextArea
+                                    value={editingValues.memo}
+                                    onChange={(e) => handleModalEditingValueChange('memo', e.target.value)}
+                                    placeholder="License 관련 메모를 입력하세요 (예: 연락 완료, 갱신 예정, 고객 확인 중 등)"
+                                    rows={3}
+                                    maxLength={1000}
+                                    showCount
+                                    style={{ width: '100%' }}
+                                />
+                            ) : (
+                                <div style={{ 
+                                    whiteSpace: 'pre-wrap', 
+                                    minHeight: '20px',
+                                    color: selectedLicense.license.memo ? 'inherit' : '#999',
+                                    lineHeight: '1.6'
+                                }}>
+                                    {selectedLicense.license.memo || '메모 없음'}
+                                </div>
+                            )}
                         </Card>
                         
                         <Title level={4} style={{ marginTop: 24, marginBottom: 16 }}>
