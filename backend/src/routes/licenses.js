@@ -52,7 +52,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             });
         }
 
-        const { managerName, department, clientName } = req.body;
+        const { managerName, department, clientName, memo } = req.body;
         const filePath = req.file.path;
         const fileContent = fs.readFileSync(filePath, 'utf8');
 
@@ -100,8 +100,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                     const licenseResult = await DatabaseService.run(`
                         INSERT INTO licenses (
                             site_id, host_id, part_number, part_name, file_name, 
-                            manager_name, department, client_name, upload_date
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+                            manager_name, department, client_name, memo, upload_date
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
                     `, [
                         site.id,
                         parsedData.siteInfo.hostId,
@@ -110,7 +110,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                         req.file.filename,
                         managerName || null,
                         department || null,
-                        clientName || null
+                        clientName || null,
+                        memo || null
                     ]);
 
                     licenseResults.push(licenseResult);
@@ -158,8 +159,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 const licenseResult = await DatabaseService.run(`
                     INSERT INTO licenses (
                         site_id, host_id, part_number, part_name, file_name, 
-                        manager_name, department, client_name, upload_date
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+                        manager_name, department, client_name, memo, upload_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
                 `, [
                     site.id,
                     parsedData.siteInfo.hostId,
@@ -168,7 +169,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                     req.file.filename,
                     managerName || null,
                     department || null,
-                    clientName || null
+                    clientName || null,
+                    memo || null
                 ]);
 
                 licenseResults.push(licenseResult);

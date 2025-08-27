@@ -66,6 +66,9 @@ const FileUpload = () => {
         if (values.clientName) {
             formData.append('clientName', values.clientName);
         }
+        if (values.memo) {
+            formData.append('memo', values.memo);
+        }
         
         try {
             // Progress simulation (실제로는 서버에서 progress 이벤트를 받아야 함)
@@ -222,6 +225,20 @@ const FileUpload = () => {
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            
+                            {/* 메모 필드 */}
+                            <Form.Item 
+                                label="메모" 
+                                name="memo"
+                                style={{ marginTop: 16 }}
+                            >
+                                <TextArea
+                                    placeholder="License 관련 메모를 입력하세요 (예: 연락 완료, 갱신 예정, 고객 확인 중 등)"
+                                    rows={3}
+                                    maxLength={1000}
+                                    showCount
+                                />
+                            </Form.Item>
                             
                             {/* 업로드 진행률 */}
                             {uploading && (
