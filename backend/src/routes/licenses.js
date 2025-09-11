@@ -5,6 +5,7 @@ const fs = require('fs');
 const moment = require('moment-timezone');
 const DatabaseService = require('../services/database');
 const LicenseParser = require('../services/licenseParser');
+const { requireAdmin, requireReadAccess } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -42,8 +43,8 @@ const upload = multer({
     }
 });
 
-// License 파일 업로드
-router.post('/upload', upload.single('file'), async (req, res) => {
+// License 파일 업로드 (관리자만)
+router.post('/upload', requireAdmin, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -240,8 +241,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-// 만료 예정 License 조회 (이 라우트는 '/' 보다 먼저 와야 함)
-router.get('/expiring', async (req, res) => {
+// 만료 예정 License 조회 (읽기 권한 이상)
+router.get('/expiring', requireReadAccess, async (req, res) => {
     try {
         const { days = 30 } = req.query;
         const futureDate = moment().add(parseInt(days), 'days').format('YYYY-MM-DD');
@@ -299,8 +300,8 @@ router.get('/expiring', async (req, res) => {
     }
 });
 
-// License 목록 조회
-router.get('/', async (req, res) => {
+// License 목록 조회 (읽기 권한 이상)
+router.get('/', requireReadAccess, async (req, res) => {
     try {
         const { page = 1, limit = 20, siteId, department, status, search, days } = req.query;
         const offset = (page - 1) * limit;
@@ -396,8 +397,8 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 특정 License 상세 조회
-router.get('/:id', async (req, res) => {
+// 특정 License 상세 조회 (읽기 권한 이상)
+router.get('/:id', requireReadAccess, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -446,8 +447,8 @@ router.get('/:id', async (req, res) => {
 });
 
 
-// License 파일 원본 내용 조회
-router.get('/:id/content', async (req, res) => {
+// License 파일 원본 내용 조회 (읽기 권한 이상)
+router.get('/:id/content', requireReadAccess, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -485,8 +486,8 @@ router.get('/:id/content', async (req, res) => {
     }
 });
 
-// License 업데이트 (담당자, 고객명, 메모)
-router.put('/:id', async (req, res) => {
+// License 업데이트 (담당자, 고객명, 메모) - 관리자만
+router.put('/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { manager_name, client_name, memo } = req.body;
@@ -526,8 +527,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// License 삭제
-router.delete('/:id', async (req, res) => {
+// License 삭제 (관리자만)
+router.delete('/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -575,8 +576,8 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// 제품별 라이선스 조회 (새로운 API)
-router.get('/products', async (req, res) => {
+// 제품별 라이선스 조회 (읽기 권한 이상)
+router.get('/products', requireReadAccess, async (req, res) => {
     try {
         const { page = 1, limit = 20, siteId, status, search } = req.query;
         const offset = (page - 1) * limit;
@@ -662,8 +663,8 @@ router.get('/products', async (req, res) => {
     }
 });
 
-// 특정 제품의 기능 상세 조회
-router.get('/products/:id/features', async (req, res) => {
+// 특정 제품의 기능 상세 조회 (읽기 권한 이상)
+router.get('/products/:id/features', requireReadAccess, async (req, res) => {
     try {
         const { id } = req.params;
 

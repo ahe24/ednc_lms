@@ -7,21 +7,21 @@ const router = express.Router();
 // 로그인
 router.post('/login', async (req, res) => {
     try {
-        const { password } = req.body;
+        const { username, password } = req.body;
         
-        if (!password) {
+        if (!username || !password) {
             return res.status(400).json({
-                error: '비밀번호가 필요합니다',
-                message: '비밀번호를 입력해주세요'
+                error: '사용자명과 비밀번호가 필요합니다',
+                message: '사용자명과 비밀번호를 입력해주세요'
             });
         }
         
-        const result = await authService.login(password);
+        const result = await authService.login(username, password);
         
         if (!result) {
             return res.status(401).json({
                 error: '로그인 실패',
-                message: '비밀번호가 올바르지 않습니다'
+                message: '사용자명 또는 비밀번호가 올바르지 않습니다'
             });
         }
         
@@ -68,6 +68,7 @@ router.post('/verify', (req, res) => {
             user: {
                 id: decoded.userId,
                 username: decoded.username,
+                role: decoded.role,
                 loginTime: decoded.loginTime
             }
         });

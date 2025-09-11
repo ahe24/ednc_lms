@@ -13,7 +13,11 @@ import {
 const { Header, Content, Footer } = AntLayout;
 
 const Layout = () => {
-  const [userInfo, setUserInfo] = useState(null);
+  const [userInfo, setUserInfo] = useState({
+    username: 'admin',
+    role: 'admin',
+    loginTime: new Date().toISOString()
+  });
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,11 +30,28 @@ const Layout = () => {
       return;
     }
 
-    // 사용자 정보 설정 (토큰에서 추출하거나 기본값)
-    setUserInfo({
-      username: 'admin',
-      loginTime: new Date().toISOString()
-    });
+    // 사용자 정보 가져오기
+    const storedUserInfo = localStorage.getItem('userInfo');
+    if (storedUserInfo) {
+      try {
+        setUserInfo(JSON.parse(storedUserInfo));
+      } catch (error) {
+        console.error('사용자 정보 파싱 오류:', error);
+        // 토큰은 있지만 사용자 정보가 잘못된 경우, 기본값 설정
+        setUserInfo({
+          username: 'admin',
+          role: 'admin',
+          loginTime: new Date().toISOString()
+        });
+      }
+    } else {
+      // 기본값 설정 (호환성을 위해)
+      setUserInfo({
+        username: 'admin',
+        role: 'admin',
+        loginTime: new Date().toISOString()
+      });
+    }
 
     // Check screen size for responsive design
     const checkMobile = () => {
@@ -45,6 +66,7 @@ const Layout = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('userInfo');
     message.success('로그아웃되었습니다');
     navigate('/login');
   };
@@ -84,20 +106,19 @@ const Layout = () => {
       icon: <FileTextOutlined />,
       label: 'License 관리',
     },
-    {
+    // 파일 업로드는 관리자만 접근 가능
+    ...(userInfo?.role === 'admin' ? [{
       key: '/upload',
       icon: <UploadOutlined />,
       label: '파일 업로드',
-    },
+    }] : []),
   ];
 
   const handleMenuClick = ({ key }) => {
     navigate(key);
   };
 
-  if (!userInfo) {
-    return null; // 로딩 중이거나 인증되지 않음
-  }
+  // 이제 userInfo는 항상 존재하므로 이 체크는 필요 없음
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
@@ -183,7 +204,9 @@ const Layout = () => {
             }}>
               <Avatar size="small" icon={<UserOutlined />} />
               {!isMobile && (
-                <span style={{ color: '#ffffff' }}>{userInfo.username}</span>
+                <span style={{ color: '#ffffff' }}>
+                  {userInfo.username} ({userInfo.role === 'admin' ? '관리자' : '조회용'})
+                </span>
               )}
             </Button>
           </Dropdown>

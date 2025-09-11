@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     Card, 
     Upload, 
@@ -12,14 +12,17 @@ import {
     Progress,
     Alert,
     Row,
-    Col
+    Col,
+    Result
 } from 'antd';
 import { 
     InboxOutlined, 
     UploadOutlined,
     FileTextOutlined,
-    CheckCircleOutlined 
+    CheckCircleOutlined,
+    StopOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { formatDateTime } from '../config/locale';
 
@@ -34,6 +37,31 @@ const FileUpload = () => {
     const [uploadResult, setUploadResult] = useState(null);
     const [fileList, setFileList] = useState([]);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [userInfo, setUserInfo] = useState(null);
+    const navigate = useNavigate();
+    
+    useEffect(() => {
+        const storedUserInfo = localStorage.getItem('userInfo');
+        if (storedUserInfo) {
+            setUserInfo(JSON.parse(storedUserInfo));
+        }
+    }, []);
+    
+    // 읽기 전용 사용자는 접근 불가
+    if (userInfo && userInfo.role !== 'admin') {
+        return (
+            <Result
+                icon={<StopOutlined style={{ color: '#ff4d4f' }} />}
+                title="접근 권한이 없습니다"
+                subTitle="파일 업로드는 관리자만 사용할 수 있습니다. 라이선스 조회만 가능합니다."
+                extra={
+                    <Button type="primary" onClick={() => navigate('/licenses')}>
+                        라이선스 관리로 이동
+                    </Button>
+                }
+            />
+        );
+    }
     
     const handleUpload = async (values) => {
         console.log('📁 파일 업로드 시작');

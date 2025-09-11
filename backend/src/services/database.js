@@ -98,6 +98,7 @@ class DatabaseService {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL DEFAULT 'admin',
                     password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'admin',
                     created_at DATETIME DEFAULT (datetime('now', 'localtime')),
                     updated_at DATETIME DEFAULT (datetime('now', 'localtime'))
                 )`
@@ -234,6 +235,19 @@ class DatabaseService {
             } else {
                 console.log('✅ memo 컬럼이 이미 존재합니다');
             }
+
+            // users 테이블 role 컬럼 추가 마이그레이션
+            const userColumns = await this.all("PRAGMA table_info(users)");
+            const hasRole = userColumns.some(col => col.name === 'role');
+            
+            if (!hasRole) {
+                console.log('🔄 users 테이블에 role 컬럼 추가 중...');
+                await this.run("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'");
+                console.log('✅ users 테이블 role 컬럼 추가 완료');
+            } else {
+                console.log('✅ users 테이블 role 컬럼이 이미 존재합니다');
+            }
+
         } catch (error) {
             console.error('❌ 마이그레이션 실행 실패:', error.message);
         }

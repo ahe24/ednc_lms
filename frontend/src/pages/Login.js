@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, message, Typography, Spin } from 'antd';
-import { LockOutlined, SafetyOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Button, message, Typography, Spin, Radio } from 'antd';
+import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { formatDateTime } from '../config/locale';
@@ -11,6 +11,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [systemLoading, setSystemLoading] = useState(true);
     const [systemStatus, setSystemStatus] = useState(null);
+    const [userType, setUserType] = useState('admin');
     const navigate = useNavigate();
     
     useEffect(() => {
@@ -44,14 +45,17 @@ const Login = () => {
         setLoading(true);
         
         try {
+            const username = userType === 'admin' ? 'admin' : 'viewer';
             const response = await apiClient.post('/api/auth/login', { 
+                username: username,
                 password: values.password 
             });
             
-            const { token } = response.data;
+            const { token, user } = response.data;
             localStorage.setItem('authToken', token);
+            localStorage.setItem('userInfo', JSON.stringify(user));
             
-            message.success('로그인 성공!');
+            message.success(`${user.role === 'admin' ? '관리자' : '읽기 전용'} 로그인 성공!`);
             navigate('/dashboard');
         } catch (error) {
             const errorMessage = error.response?.data?.message || '로그인에 실패했습니다.';
@@ -102,7 +106,7 @@ const Login = () => {
                     <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
                         Siemens License 관리 시스템
                     </Title>
-                    <Text type="secondary">관리자 인증이 필요합니다</Text>
+                    <Text type="secondary">사용자 인증이 필요합니다</Text>
                 </div>
                 
                 {systemStatus && (
@@ -120,13 +124,34 @@ const Login = () => {
                 )}
                 
                 <Form onFinish={handleLogin} size="large">
+                    <Form.Item label="사용자 유형">
+                        <Radio.Group
+                            value={userType}
+                            onChange={(e) => setUserType(e.target.value)}
+                            style={{ width: '100%' }}
+                        >
+                            <Radio.Button 
+                                value="admin" 
+                                style={{ width: '50%', textAlign: 'center' }}
+                            >
+                                <UserOutlined /> 관리자
+                            </Radio.Button>
+                            <Radio.Button 
+                                value="viewer" 
+                                style={{ width: '50%', textAlign: 'center' }}
+                            >
+                                <SafetyOutlined /> 조회용
+                            </Radio.Button>
+                        </Radio.Group>
+                    </Form.Item>
+                    
                     <Form.Item 
                         name="password" 
-                        rules={[{ required: true, message: '관리자 비밀번호를 입력해주세요' }]}
+                        rules={[{ required: true, message: '비밀번호를 입력해주세요' }]}
                     >
                         <Input.Password
                             prefix={<LockOutlined />}
-                            placeholder="관리자 비밀번호"
+                            placeholder={userType === 'admin' ? '관리자 비밀번호' : '조회 비밀번호'}
                         />
                     </Form.Item>
                     
@@ -146,8 +171,16 @@ const Login = () => {
                 
                 <div style={{ textAlign: 'center', marginTop: 16 }}>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
-                        비밀번호 힌트: same with Door lock<br />
-                        시스템 관리자에게 문의하여 비밀번호를 확인하세요
+                        {userType === 'admin' ? (
+                            <>
+                                시스템 관리자에게 문의하여 비밀번호를 확인하세요
+                            </>
+                        ) : (
+                            <>
+                                조회용 계정: viewer / view123<br />
+                                라이선스 정보 조회만 가능합니다
+                            </>
+                        )}
                     </Text>
                 </div>
             </Card>

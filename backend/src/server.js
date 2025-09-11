@@ -37,7 +37,7 @@ app.use('/uploads', express.static(uploadDir));
 
 // 데이터베이스 초기화
 const DatabaseService = require('./services/database');
-const { authenticate } = require('./middleware/auth');
+const { authenticate, requireAdmin, requireReadAccess } = require('./middleware/auth');
 DatabaseService.initialize();
 
 // 라우트 import
@@ -47,8 +47,8 @@ const dashboardRoutes = require('./routes/dashboard');
 
 // 라우트 설정
 app.use('/api/auth', authRoutes);
-app.use('/api/licenses', authenticate, licenseRoutes);
-app.use('/api/dashboard', authenticate, dashboardRoutes);
+app.use('/api/licenses', licenseRoutes);
+app.use('/api/dashboard', requireReadAccess, dashboardRoutes);
 
 // 헬스 체크 (한국어 응답)
 app.get('/api/health', (req, res) => {

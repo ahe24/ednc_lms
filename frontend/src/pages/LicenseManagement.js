@@ -58,6 +58,15 @@ const LicenseManagement = () => {
     const [editingModal, setEditingModal] = useState(false);
     const [editingValues, setEditingValues] = useState({});
     
+    // 사용자 권한 확인
+    const [userInfo, setUserInfo] = useState(null);
+    useEffect(() => {
+        const storedUserInfo = localStorage.getItem('userInfo');
+        if (storedUserInfo) {
+            setUserInfo(JSON.parse(storedUserInfo));
+        }
+    }, []);
+    
     // Initialize filters from URL parameters
     useEffect(() => {
         const urlStatus = searchParams.get('status');
@@ -315,7 +324,8 @@ const LicenseManagement = () => {
                 );
             }
         },
-        {
+        // 관리자만 작업 열 표시
+        ...(userInfo?.role === 'admin' ? [{
             title: '작업',
             key: 'action',
             width: 80,
@@ -332,7 +342,7 @@ const LicenseManagement = () => {
                     </Button>
                 </Space>
             ),
-        },
+        }] : []),
     ];
     
     return (
@@ -478,9 +488,11 @@ const LicenseManagement = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <Button icon={<EditOutlined />} onClick={startModalEditing}>
-                                            편집
-                                        </Button>
+                                        {userInfo?.role === 'admin' && (
+                                            <Button icon={<EditOutlined />} onClick={startModalEditing}>
+                                                편집
+                                            </Button>
+                                        )}
                                         <Button onClick={() => {
                                             setDetailModalVisible(false);
                                             setShowAllFeatures(false);
