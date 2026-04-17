@@ -19,13 +19,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // CORS 설정 - 개발 환경에서는 모든 출처 허용
+const frontendPort = process.env.FRONTEND_PORT || 3600;
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'development' 
-        ? true 
+    origin: process.env.NODE_ENV === 'development'
+        ? true
         : [
-            `http://${process.env.SERVER_IP || 'localhost'}:${process.env.FRONTEND_PORT || 3600}`,
-            /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3600$/,
-            /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}:3600$/
+            `http://${process.env.SERVER_IP || 'localhost'}:${frontendPort}`,
+            new RegExp(`^http:\\/\\/192\\.168\\.\\d{1,3}\\.\\d{1,3}:${frontendPort}$`),
+            new RegExp(`^http:\\/\\/10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:${frontendPort}$`)
         ],
     credentials: true
 };

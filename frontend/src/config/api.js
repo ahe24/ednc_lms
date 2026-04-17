@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:3601`,
+  baseURL: process.env.REACT_APP_API_BASE_URL || `http://${window.location.hostname}:${process.env.REACT_APP_BACKEND_PORT || 3601}`,
   timeout: 10000
 };
 

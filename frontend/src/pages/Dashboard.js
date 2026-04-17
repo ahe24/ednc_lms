@@ -271,7 +271,7 @@ const Dashboard = () => {
             
             {/* 시스템 정보 알림 */}
             <Alert 
-                message={`서버: ${window.location.hostname}:3601 | 현재 시간: ${formatDateTime(new Date())}`}
+                message={`서버: ${window.location.hostname}:${process.env.REACT_APP_BACKEND_PORT || 3601} | 현재 시간: ${formatDateTime(new Date())}`}
                 type="info"
                 showIcon
                 style={{ marginBottom: 24 }}
