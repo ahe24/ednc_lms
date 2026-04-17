@@ -163,9 +163,16 @@ const Dashboard = () => {
     const expiringColumns = [
         {
             title: '사이트명',
-            dataIndex: 'site_name',
             key: 'site_name',
-            width: 120,
+            width: 130,
+            render: (_, record) => (
+                <div>
+                    <div style={{ fontWeight: 500 }}>{record.site_name}</div>
+                    {record.site_number && (
+                        <div style={{ fontSize: '13px', color: '#888' }}>{record.site_number}</div>
+                    )}
+                </div>
+            ),
         },
         {
             title: '제품명',
