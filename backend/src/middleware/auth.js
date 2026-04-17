@@ -2,12 +2,15 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const DatabaseService = require('../services/database');
 
+// role → department 매핑 (부서 없는 계정은 null → 전체 조회)
+const DEPT_MAP = { admin: 'EDA', pads: 'PADS', cad: 'CAD' };
+
 class AuthService {
     constructor() {
         this.initialized = false;
         this.initializeAdmin();
     }
-    
+
     async initializeAdmin() {
         try {
             // 데이터베이스가 초기화될 때까지 대기
@@ -15,93 +18,77 @@ class AuthService {
                 setTimeout(() => this.initializeAdmin(), 1000);
                 return;
             }
-            
-            const adminPassword = process.env.ADMIN_PASSWORD || '70998';
-            const readonlyPassword = process.env.READONLY_PASSWORD || 'view123';
-            const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
-            const hashedReadonlyPassword = await bcrypt.hash(readonlyPassword, 10);
-            
-            // 기존 admin 사용자 확인
-            const existingAdmin = await DatabaseService.get('SELECT * FROM users WHERE username = ?', ['admin']);
-            
-            if (existingAdmin) {
-                // 기존 사용자의 비밀번호와 역할 업데이트
-                await DatabaseService.run(
-                    'UPDATE users SET password_hash = ?, role = ?, updated_at = datetime("now", "localtime") WHERE username = ?',
-                    [hashedAdminPassword, 'admin', 'admin']
-                );
-                console.log('✅ 관리자 계정 비밀번호 업데이트 완료');
-            } else {
-                // 새 admin 사용자 생성
-                await DatabaseService.run(
-                    'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                    ['admin', hashedAdminPassword, 'admin']
-                );
-                console.log('✅ 관리자 계정 생성 완료');
+
+            const accounts = [
+                { username: 'admin',  password: process.env.ADMIN_PASSWORD  || '70998',     role: 'admin'    },
+                { username: 'viewer', password: process.env.READONLY_PASSWORD || 'view123',  role: 'readonly' },
+                { username: 'pads',   password: process.env.PADS_PASSWORD   || 'pads11681', role: 'pads'     },
+                { username: 'cad',    password: process.env.CAD_PASSWORD    || 'cad11681',  role: 'cad'      },
+            ];
+
+            for (const acc of accounts) {
+                const hashed = await bcrypt.hash(acc.password, 10);
+                const existing = await DatabaseService.get('SELECT id FROM users WHERE username = ?', [acc.username]);
+                if (existing) {
+                    await DatabaseService.run(
+                        'UPDATE users SET password_hash = ?, role = ?, updated_at = datetime("now","localtime") WHERE username = ?',
+                        [hashed, acc.role, acc.username]
+                    );
+                } else {
+                    await DatabaseService.run(
+                        'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
+                        [acc.username, hashed, acc.role]
+                    );
+                }
+                console.log(`✅ 계정 초기화 완료: ${acc.username} (${acc.role})`);
             }
 
-            // 기존 readonly 사용자 확인
-            const existingReadonly = await DatabaseService.get('SELECT * FROM users WHERE username = ?', ['viewer']);
-            
-            if (existingReadonly) {
-                // 기존 읽기 전용 사용자의 비밀번호 업데이트
-                await DatabaseService.run(
-                    'UPDATE users SET password_hash = ?, role = ?, updated_at = datetime("now", "localtime") WHERE username = ?',
-                    [hashedReadonlyPassword, 'readonly', 'viewer']
-                );
-                console.log('✅ 읽기 전용 계정 비밀번호 업데이트 완료');
-            } else {
-                // 새 readonly 사용자 생성
-                await DatabaseService.run(
-                    'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)',
-                    ['viewer', hashedReadonlyPassword, 'readonly']
-                );
-                console.log('✅ 읽기 전용 계정 생성 완료 (사용자명: viewer, 비밀번호: view123)');
-            }
-            
             this.initialized = true;
         } catch (error) {
             console.error('❌ 사용자 계정 초기화 실패:', error.message);
-            // 3초 후 재시도
             setTimeout(() => this.initializeAdmin(), 3000);
         }
     }
-    
+
     async login(username, password) {
         try {
             if (!this.initialized) {
                 throw new Error('인증 시스템이 초기화되지 않았습니다');
             }
-            
+
             const user = await DatabaseService.get('SELECT * FROM users WHERE username = ?', [username]);
             if (!user) {
                 return null;
             }
-            
+
             const isValid = await bcrypt.compare(password, user.password_hash);
             if (!isValid) {
                 return null;
             }
-            
+
+            const department = DEPT_MAP[user.role] || null;
+
             const token = jwt.sign(
-                { 
-                    userId: user.id, 
+                {
+                    userId: user.id,
                     username: user.username,
                     role: user.role,
+                    department,
                     loginTime: new Date().toISOString()
                 },
                 process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
-            
-            return { 
-                token, 
-                user: { 
-                    id: user.id, 
+
+            return {
+                token,
+                user: {
+                    id: user.id,
                     username: user.username,
                     role: user.role,
+                    department,
                     loginTime: new Date().toISOString()
-                } 
+                }
             };
         } catch (error) {
             console.error('로그인 처리 오류:', error);
@@ -226,8 +213,8 @@ const requireReadAccess = (req, res, next) => {
         });
     }
 
-    if (!['admin', 'readonly'].includes(decoded.role)) {
-        return res.status(403).json({ 
+    if (!['admin', 'readonly', 'pads', 'cad'].includes(decoded.role)) {
+        return res.status(403).json({
             error: '접근 권한이 없습니다',
             message: '이 페이지에 접근할 권한이 없습니다'
         });

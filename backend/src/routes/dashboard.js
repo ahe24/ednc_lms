@@ -5,9 +5,21 @@ const LicenseParser = require('../services/licenseParser');
 
 const router = express.Router();
 
+// 로그인 계정의 부서 필터 구성 헬퍼
+function getDeptFilter(req) {
+    const dept = req.user?.department || null;
+    if (!dept) return { clause: '', params: [] };
+    return { clause: dept, params: [dept] };
+}
+
 // 대시보드 요약 정보
 router.get('/summary', async (req, res) => {
     try {
+        const df = getDeptFilter(req);
+        const deptWhere = df.clause ? 'AND l.department = ?' : '';
+        const deptWhereSimple = df.clause ? 'AND department = ?' : '';
+        const p = df.params;
+
         // 기본 통계 쿼리들을 병렬로 실행
         const [
             totalLicensesResult,
@@ -19,56 +31,59 @@ router.get('/summary', async (req, res) => {
             expiredResult
         ] = await Promise.all([
             // 총 License 수
-            DatabaseService.get('SELECT COUNT(*) as count FROM licenses'),
-            
+            DatabaseService.get(`SELECT COUNT(*) as count FROM licenses WHERE 1=1 ${deptWhereSimple}`, p),
+
             // 총 피처 수
-            DatabaseService.get('SELECT COUNT(*) as count FROM license_features'),
-            
+            DatabaseService.get(`
+                SELECT COUNT(lf.id) as count FROM license_features lf
+                JOIN licenses l ON lf.license_id = l.id WHERE 1=1 ${deptWhere}
+            `, p),
+
             // 활성 사이트 수
-            DatabaseService.get('SELECT COUNT(DISTINCT site_id) as count FROM licenses'),
-            
+            DatabaseService.get(`SELECT COUNT(DISTINCT site_id) as count FROM licenses WHERE 1=1 ${deptWhereSimple}`, p),
+
             // 부서별 분포
             DatabaseService.all(`
-                SELECT department, COUNT(*) as count 
-                FROM licenses 
-                WHERE department IS NOT NULL 
+                SELECT department, COUNT(*) as count
+                FROM licenses
+                WHERE department IS NOT NULL ${deptWhereSimple}
                 GROUP BY department
-            `),
-            
-            // 30일 내 만료 예정 (today <= expiry < today+30days)
+            `, p),
+
+            // 30일 내 만료 예정
             DatabaseService.get(`
-                SELECT COUNT(DISTINCT l.id) as count 
+                SELECT COUNT(DISTINCT l.id) as count
                 FROM licenses l
                 WHERE EXISTS (
-                    SELECT 1 FROM license_features lf 
-                    WHERE lf.license_id = l.id 
+                    SELECT 1 FROM license_features lf
+                    WHERE lf.license_id = l.id
                     AND lf.expiry_date >= date('now')
                     AND lf.expiry_date < date('now', '+30 days')
-                )
-            `),
-            
-            // 7일 내 만료 예정 (today <= expiry < today+7days)
+                ) ${deptWhere}
+            `, p),
+
+            // 7일 내 만료 예정
             DatabaseService.get(`
-                SELECT COUNT(DISTINCT l.id) as count 
+                SELECT COUNT(DISTINCT l.id) as count
                 FROM licenses l
                 WHERE EXISTS (
-                    SELECT 1 FROM license_features lf 
-                    WHERE lf.license_id = l.id 
+                    SELECT 1 FROM license_features lf
+                    WHERE lf.license_id = l.id
                     AND lf.expiry_date >= date('now')
                     AND lf.expiry_date < date('now', '+7 days')
-                )
-            `),
-            
-            // 이미 만료된 것 (expiry < today)
+                ) ${deptWhere}
+            `, p),
+
+            // 이미 만료된 것
             DatabaseService.get(`
-                SELECT COUNT(DISTINCT l.id) as count 
+                SELECT COUNT(DISTINCT l.id) as count
                 FROM licenses l
                 WHERE EXISTS (
-                    SELECT 1 FROM license_features lf 
-                    WHERE lf.license_id = l.id 
+                    SELECT 1 FROM license_features lf
+                    WHERE lf.license_id = l.id
                     AND lf.expiry_date < date('now')
-                )
-            `)
+                ) ${deptWhere}
+            `, p)
         ]);
 
         // 부서별 분포를 객체로 변환
@@ -81,20 +96,23 @@ router.get('/summary', async (req, res) => {
 
         // 최근 업로드 정보
         const recentUploads = await DatabaseService.all(`
-            SELECT l.*, s.site_name 
+            SELECT l.*, s.site_name
             FROM licenses l
             LEFT JOIN sites s ON l.site_id = s.id
-            ORDER BY l.upload_date DESC 
+            WHERE 1=1 ${deptWhere}
+            ORDER BY l.upload_date DESC
             LIMIT 5
-        `);
+        `, p);
 
         // 가장 빠른 만료일과 가장 늦은 만료일
         const expiryRange = await DatabaseService.get(`
-            SELECT 
-                MIN(expiry_date) as earliest_expiry,
-                MAX(expiry_date) as latest_expiry
-            FROM license_features
-        `);
+            SELECT
+                MIN(lf.expiry_date) as earliest_expiry,
+                MAX(lf.expiry_date) as latest_expiry
+            FROM license_features lf
+            JOIN licenses l ON lf.license_id = l.id
+            WHERE 1=1 ${deptWhere}
+        `, p);
 
         const summary = {
             totalLicenses: totalLicensesResult.count,
@@ -136,19 +154,25 @@ router.get('/summary', async (req, res) => {
 // 만료 상태별 차트 데이터
 router.get('/expiry-chart', async (req, res) => {
     try {
+        const df = getDeptFilter(req);
+        const deptJoin = df.clause ? 'JOIN licenses l ON lf.license_id = l.id' : '';
+        const deptWhere = df.clause ? 'WHERE l.department = ?' : '';
+
         const chartData = await DatabaseService.all(`
-            SELECT 
-                CASE 
-                    WHEN expiry_date < date('now') THEN 'expired'
-                    WHEN expiry_date = date('now') THEN 'expires_today'
-                    WHEN expiry_date BETWEEN date('now', '+1 day') AND date('now', '+7 days') THEN 'expires_soon'
-                    WHEN expiry_date BETWEEN date('now', '+8 days') AND date('now', '+30 days') THEN 'expires_warning'
+            SELECT
+                CASE
+                    WHEN lf.expiry_date < date('now') THEN 'expired'
+                    WHEN lf.expiry_date = date('now') THEN 'expires_today'
+                    WHEN lf.expiry_date BETWEEN date('now', '+1 day') AND date('now', '+7 days') THEN 'expires_soon'
+                    WHEN lf.expiry_date BETWEEN date('now', '+8 days') AND date('now', '+30 days') THEN 'expires_warning'
                     ELSE 'active'
                 END as status,
                 COUNT(*) as count
-            FROM license_features
+            FROM license_features lf
+            ${deptJoin}
+            ${deptWhere}
             GROUP BY 1
-        `);
+        `, df.params);
 
         // 한국어 라벨과 색상 추가
         const chartDataWithLabels = chartData.map(item => {
@@ -186,16 +210,19 @@ router.get('/expiry-chart', async (req, res) => {
 router.get('/upload-trend', async (req, res) => {
     try {
         const { months = 12 } = req.query;
-        
+        const df = getDeptFilter(req);
+        const deptWhere = df.clause ? 'AND department = ?' : '';
+
         const trendData = await DatabaseService.all(`
-            SELECT 
+            SELECT
                 strftime('%Y-%m', upload_date) as month,
                 COUNT(*) as count
             FROM licenses
             WHERE upload_date >= date('now', '-${parseInt(months)} months')
+            ${deptWhere}
             GROUP BY strftime('%Y-%m', upload_date)
             ORDER BY month
-        `);
+        `, df.params);
 
         // 한국어 월 형식으로 변환
         const trendDataFormatted = trendData.map(item => ({
@@ -221,8 +248,11 @@ router.get('/upload-trend', async (req, res) => {
 // 사이트별 통계
 router.get('/sites-summary', async (req, res) => {
     try {
+        const df = getDeptFilter(req);
+        const deptWhere = df.clause ? 'AND l.department = ?' : '';
+
         const sitesData = await DatabaseService.all(`
-            SELECT 
+            SELECT
                 s.id,
                 s.site_name,
                 s.site_number,
@@ -233,12 +263,12 @@ router.get('/sites-summary', async (req, res) => {
                 SUM(CASE WHEN lf.expiry_date < date('now') THEN 1 ELSE 0 END) as expired_count,
                 SUM(CASE WHEN lf.expiry_date BETWEEN date('now') AND date('now', '+30 days') THEN 1 ELSE 0 END) as expiring_soon_count
             FROM sites s
-            LEFT JOIN licenses l ON s.id = l.site_id
+            LEFT JOIN licenses l ON s.id = l.site_id ${deptWhere}
             LEFT JOIN license_features lf ON l.id = lf.license_id
             GROUP BY s.id, s.site_name, s.site_number
             HAVING license_count > 0
             ORDER BY license_count DESC
-        `);
+        `, df.params);
 
         // 만료 상태 추가
         const sitesWithStatus = sitesData.map(site => ({

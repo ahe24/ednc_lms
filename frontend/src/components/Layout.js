@@ -106,8 +106,8 @@ const Layout = () => {
       icon: <FileTextOutlined />,
       label: 'License 관리',
     },
-    // 파일 업로드는 관리자만 접근 가능
-    ...(userInfo?.role === 'admin' ? [{
+    // 파일 업로드는 팀 계정(admin/pads/cad)만 접근 가능
+    ...(['admin', 'pads', 'cad'].includes(userInfo?.role) ? [{
       key: '/upload',
       icon: <UploadOutlined />,
       label: '파일 업로드',
@@ -205,7 +205,9 @@ const Layout = () => {
               <Avatar size="small" icon={<UserOutlined />} />
               {!isMobile && (
                 <span style={{ color: '#ffffff' }}>
-                  {userInfo.username} ({userInfo.role === 'admin' ? '관리자' : '조회용'})
+                  {userInfo.username} ({
+                    { admin: 'EDA 관리자', pads: 'PADS팀', cad: 'CAD팀', readonly: '조회용' }[userInfo.role] || userInfo.role
+                  })
                 </span>
               )}
             </Button>

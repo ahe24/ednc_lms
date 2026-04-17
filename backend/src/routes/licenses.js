@@ -44,7 +44,12 @@ const upload = multer({
 });
 
 // License 파일 업로드 (관리자만)
-router.post('/upload', requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/upload', requireReadAccess, upload.single('file'), async (req, res) => {
+    // admin, pads, cad만 업로드 가능 (readonly/viewer 제외)
+    if (!['admin', 'pads', 'cad'].includes(req.user.role)) {
+        return res.status(403).json({ error: '업로드 권한이 없습니다', message: '파일 업로드는 팀 계정 이상만 가능합니다' });
+    }
+
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -248,8 +253,15 @@ router.get('/expiring', requireReadAccess, async (req, res) => {
         const futureDate = moment().add(parseInt(days), 'days').format('YYYY-MM-DD');
         const today = moment().format('YYYY-MM-DD');
 
+        // 부서 필터 구성
+        const userDeptExp = req.user?.department || null;
+        const deptListExp = userDeptExp ? [userDeptExp] : [];
+        const deptClauseExp = deptListExp.length > 0
+            ? `AND l.department IN (${deptListExp.map(() => '?').join(',')})`
+            : '';
+
         const expiringLicenses = await DatabaseService.all(`
-            SELECT 
+            SELECT
                 l.*,
                 s.site_name,
                 s.site_number,
@@ -265,13 +277,14 @@ router.get('/expiring', requireReadAccess, async (req, res) => {
             LEFT JOIN sites s ON l.site_id = s.id
             LEFT JOIN license_features lf ON l.id = lf.license_id
             WHERE EXISTS (
-                SELECT 1 FROM license_features lf5 
-                WHERE lf5.license_id = l.id 
+                SELECT 1 FROM license_features lf5
+                WHERE lf5.license_id = l.id
                 AND lf5.expiry_date BETWEEN ? AND ?
             )
+            ${deptClauseExp}
             GROUP BY l.id
             ORDER BY earliest_expiry ASC
-        `, [today, futureDate]);
+        `, [today, futureDate, ...deptListExp]);
 
         // 만료 상태 추가
         const licensesWithStatus = expiringLicenses.map(license => ({
@@ -303,7 +316,7 @@ router.get('/expiring', requireReadAccess, async (req, res) => {
 // License 목록 조회 (읽기 권한 이상)
 router.get('/', requireReadAccess, async (req, res) => {
     try {
-        const { page = 1, limit = 20, siteId, department, status, search, days } = req.query;
+        const { page = 1, limit = 20, siteId, extraDepts, status, search, days } = req.query;
         const offset = (page - 1) * limit;
 
         let whereClause = 'WHERE 1=1';
@@ -314,9 +327,16 @@ router.get('/', requireReadAccess, async (req, res) => {
             params.push(siteId);
         }
 
-        if (department) {
-            whereClause += ' AND l.department = ?';
-            params.push(department);
+        // 부서 필터: 로그인 계정 부서는 항상 포함, extraDepts로 추가 부서 선택 가능
+        const userDept = req.user?.department || null;
+        const deptList = userDept ? [userDept] : [];
+        if (extraDepts) {
+            extraDepts.split(',').forEach(d => { if (d && !deptList.includes(d)) deptList.push(d); });
+        }
+        if (deptList.length > 0) {
+            const placeholders = deptList.map(() => '?').join(',');
+            whereClause += ` AND l.department IN (${placeholders})`;
+            params.push(...deptList);
         }
 
         if (search) {

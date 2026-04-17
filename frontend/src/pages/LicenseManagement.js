@@ -45,7 +45,7 @@ const LicenseManagement = () => {
     });
     const [filters, setFilters] = useState({
         search: '',
-        department: '',
+        extraDepts: [],
         status: '',
         days: ''
     });
@@ -97,7 +97,7 @@ const LicenseManagement = () => {
                 page: pagination.current,
                 limit: pagination.pageSize,
                 ...(filters.search && { search: filters.search }),
-                ...(filters.department && { department: filters.department }),
+                ...(filters.extraDepts.length > 0 && { extraDepts: filters.extraDepts.join(',') }),
                 ...(filters.status && { status: filters.status }),
                 ...(filters.days && { days: filters.days })
             };
@@ -231,10 +231,16 @@ const LicenseManagement = () => {
     const columns = [
         {
             title: '사이트명',
-            dataIndex: 'site_name',
             key: 'site_name',
-            width: 120,
-            ellipsis: true,
+            width: 130,
+            render: (_, record) => (
+                <div>
+                    <div style={{ fontWeight: 500 }}>{record.site_name}</div>
+                    {record.site_number && (
+                        <div style={{ fontSize: '13px', color: '#888' }}>{record.site_number}</div>
+                    )}
+                </div>
+            ),
         },
         {
             title: '만료 상태',
@@ -386,16 +392,18 @@ const LicenseManagement = () => {
                     </Col>
                     <Col xs={24} sm={12} md={4}>
                         <Select
-                            placeholder="부서 선택"
+                            mode="multiple"
+                            placeholder={`+ 다른 팀 추가 (내 팀: ${userInfo?.department || '전체'})`}
                             style={{ width: '100%' }}
-                            value={filters.department || undefined}
-                            onChange={(value) => handleFilterChange('department', value || '')}
+                            value={filters.extraDepts}
+                            onChange={(value) => handleFilterChange('extraDepts', value)}
                             allowClear
+                            maxTagCount={1}
                         >
-                            <Option value="">전체 부서</Option>
-                            <Option value="EDA">EDA</Option>
-                            <Option value="PADS">PADS</Option>
-                            <Option value="CAD">CAD</Option>
+                            {['EDA', 'PADS', 'CAD']
+                                .filter(d => d !== userInfo?.department)
+                                .map(d => <Option key={d} value={d}>{d}팀</Option>)
+                            }
                         </Select>
                     </Col>
                     <Col xs={24} sm={12} md={4}>

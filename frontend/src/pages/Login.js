@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, message, Typography, Spin, Radio } from 'antd';
-import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Button, message, Typography, Spin, Select } from 'antd';
+import { LockOutlined, SafetyOutlined, TeamOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { formatDateTime } from '../config/locale';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
+
+const USERNAME_MAP = { admin: 'admin', pads: 'pads', cad: 'cad', viewer: 'viewer' };
 
 const Login = () => {
     const [loading, setLoading] = useState(false);
@@ -45,17 +48,18 @@ const Login = () => {
         setLoading(true);
         
         try {
-            const username = userType === 'admin' ? 'admin' : 'viewer';
-            const response = await apiClient.post('/api/auth/login', { 
-                username: username,
-                password: values.password 
+            const username = USERNAME_MAP[userType] || userType;
+            const response = await apiClient.post('/api/auth/login', {
+                username,
+                password: values.password
             });
-            
+
             const { token, user } = response.data;
             localStorage.setItem('authToken', token);
             localStorage.setItem('userInfo', JSON.stringify(user));
-            
-            message.success(`${user.role === 'admin' ? '관리자' : '읽기 전용'} 로그인 성공!`);
+
+            const teamLabel = { admin: 'EDA팀 관리자', pads: 'PADS팀', cad: 'CAD팀', readonly: '조회용' }[user.role] || user.role;
+            message.success(`${teamLabel} 로그인 성공!`);
             navigate('/dashboard');
         } catch (error) {
             const errorMessage = error.response?.data?.message || '로그인에 실패했습니다.';
@@ -124,34 +128,28 @@ const Login = () => {
                 )}
                 
                 <Form onFinish={handleLogin} size="large">
-                    <Form.Item label="사용자 유형">
-                        <Radio.Group
+                    <Form.Item label="팀 선택">
+                        <Select
                             value={userType}
-                            onChange={(e) => setUserType(e.target.value)}
+                            onChange={setUserType}
+                            size="large"
                             style={{ width: '100%' }}
+                            suffixIcon={<TeamOutlined />}
                         >
-                            <Radio.Button 
-                                value="admin" 
-                                style={{ width: '50%', textAlign: 'center' }}
-                            >
-                                <UserOutlined /> 관리자
-                            </Radio.Button>
-                            <Radio.Button 
-                                value="viewer" 
-                                style={{ width: '50%', textAlign: 'center' }}
-                            >
-                                <SafetyOutlined /> 조회용
-                            </Radio.Button>
-                        </Radio.Group>
+                            <Option value="admin">EDA팀 (관리자)</Option>
+                            <Option value="pads">PADS팀</Option>
+                            <Option value="cad">CAD팀</Option>
+                            <Option value="viewer">조회용</Option>
+                        </Select>
                     </Form.Item>
-                    
-                    <Form.Item 
-                        name="password" 
+
+                    <Form.Item
+                        name="password"
                         rules={[{ required: true, message: '비밀번호를 입력해주세요' }]}
                     >
                         <Input.Password
                             prefix={<LockOutlined />}
-                            placeholder={userType === 'admin' ? '관리자 비밀번호' : '조회 비밀번호'}
+                            placeholder="비밀번호"
                         />
                     </Form.Item>
                     
@@ -171,16 +169,7 @@ const Login = () => {
                 
                 <div style={{ textAlign: 'center', marginTop: 16 }}>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {userType === 'admin' ? (
-                            <>
-                                시스템 관리자에게 문의하여 비밀번호를 확인하세요
-                            </>
-                        ) : (
-                            <>
-                                조회용 계정: viewer / view123<br />
-                                라이선스 정보 조회만 가능합니다
-                            </>
-                        )}
+                        비밀번호를 모르는 경우 시스템 관리자에게 문의하세요
                     </Text>
                 </div>
             </Card>

@@ -43,17 +43,21 @@ const FileUpload = () => {
     useEffect(() => {
         const storedUserInfo = localStorage.getItem('userInfo');
         if (storedUserInfo) {
-            setUserInfo(JSON.parse(storedUserInfo));
+            const parsed = JSON.parse(storedUserInfo);
+            setUserInfo(parsed);
+            if (parsed.department) {
+                form.setFieldValue('department', parsed.department);
+            }
         }
     }, []);
     
-    // 읽기 전용 사용자는 접근 불가
-    if (userInfo && userInfo.role !== 'admin') {
+    // viewer(readonly) 계정은 업로드 불가
+    if (userInfo && !['admin', 'pads', 'cad'].includes(userInfo.role)) {
         return (
             <Result
                 icon={<StopOutlined style={{ color: '#ff4d4f' }} />}
                 title="접근 권한이 없습니다"
-                subTitle="파일 업로드는 관리자만 사용할 수 있습니다. 라이선스 조회만 가능합니다."
+                subTitle="파일 업로드는 팀 계정(EDA/PADS/CAD)만 사용할 수 있습니다."
                 extra={
                     <Button type="primary" onClick={() => navigate('/licenses')}>
                         라이선스 관리로 이동
@@ -62,6 +66,8 @@ const FileUpload = () => {
             />
         );
     }
+
+    const userDept = userInfo?.department || 'EDA';
     
     const handleUpload = async (values) => {
         console.log('📁 파일 업로드 시작');
@@ -240,10 +246,10 @@ const FileUpload = () => {
                                     </Form.Item>
                                 </Col>
                                 <Col xs={24} sm={8}>
-                                    <Form.Item 
-                                        label="부서" 
+                                    <Form.Item
+                                        label="부서"
                                         name="department"
-                                        initialValue="EDA"
+                                        initialValue={userDept}
                                     >
                                         <Select placeholder="부서를 선택하세요" allowClear>
                                             <Option value="EDA">EDA</Option>
