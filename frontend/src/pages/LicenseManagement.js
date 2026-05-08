@@ -232,7 +232,7 @@ const LicenseManagement = () => {
         {
             title: '사이트명',
             key: 'site_name',
-            width: 130,
+            width: 150,
             render: (_, record) => (
                 <div>
                     <div style={{ fontWeight: 500 }}>{record.site_name}</div>
@@ -245,7 +245,7 @@ const LicenseManagement = () => {
         {
             title: '만료 상태',
             key: 'expiry_status',
-            width: 140,
+            width: 80,
             render: (_, record) => {
                 if (!record.feature_count) return '-';
                 const mixedStatus = getMixedExpiryStatus(record);
@@ -270,7 +270,7 @@ const LicenseManagement = () => {
             title: '고객명',
             dataIndex: 'client_name',
             key: 'client_name',
-            width: 120,
+            width: 60,
             render: (text) => text || '-',
         },
         {
@@ -291,22 +291,15 @@ const LicenseManagement = () => {
             title: '부서',
             dataIndex: 'department',
             key: 'department',
-            width: 80,
+            width: 50,
             render: (text) => text || '-',
-        },
-        {
-            title: 'Feature 수',
-            dataIndex: 'feature_count',
-            key: 'feature_count',
-            width: 80,
-            render: (count) => `${count || 0}개`,
         },
         {
             title: '업로드일',
             dataIndex: 'upload_date',
             key: 'upload_date',
-            width: 100,
-            render: (date) => formatDate(date, 'MM/DD'),
+            width: 60,
+            render: (date) => formatDate(date, 'YYYY/MM/DD'),
         },
         {
             title: '메모',
@@ -334,7 +327,7 @@ const LicenseManagement = () => {
         ...(userInfo?.role === 'admin' ? [{
             title: '작업',
             key: 'action',
-            width: 80,
+            width: 60,
             render: (_, record) => (
                 <Space size="small" onClick={(e) => e.stopPropagation()}>
                     <Button 

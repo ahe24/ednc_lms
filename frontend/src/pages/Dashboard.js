@@ -164,7 +164,7 @@ const Dashboard = () => {
         {
             title: '사이트명',
             key: 'site_name',
-            width: 130,
+            width: '14%',
             render: (_, record) => (
                 <div>
                     <div style={{ fontWeight: 500 }}>{record.site_name}</div>
@@ -178,27 +178,20 @@ const Dashboard = () => {
             title: '제품명',
             dataIndex: 'part_name',
             key: 'part_name',
-            width: 200,
+            width: '24%',
             ellipsis: true,
-        },
-        {
-            title: 'Feature 수',
-            dataIndex: 'feature_count',
-            key: 'feature_count',
-            width: 100,
-            render: (count) => `${count || 0}개`,
         },
         {
             title: '가장 빠른 만료일',
             dataIndex: 'earliest_expiry',
             key: 'earliest_expiry',
-            width: 120,
+            width: '10%',
             render: (date) => formatDate(date, 'MM/DD'),
         },
         {
             title: '만료 상태',
             key: 'status',
-            width: 120,
+            width: '13%',
             render: (_, record) => {
                 if (!record.feature_count) return '-';
                 const mixedStatus = getMixedExpiryStatus(record);
@@ -215,26 +208,25 @@ const Dashboard = () => {
             title: '담당자',
             dataIndex: 'manager_name',
             key: 'manager_name',
-            width: 80,
+            width: '9%',
             render: (name) => name || '-'
         },
         {
             title: '메모',
             dataIndex: 'memo',
             key: 'memo',
-            width: 100,
+            width: '30%',
+            ellipsis: { showTitle: false },
             render: (memo) => {
                 if (!memo) return '-';
-                
-                const truncatedMemo = memo.length > 20 ? `${memo.substring(0, 20)}...` : memo;
-                
+
                 return (
                     <Tooltip title={memo} placement="topLeft">
-                        <span style={{ 
+                        <span style={{
                             cursor: 'help',
                             color: '#1890ff'
                         }}>
-                            {truncatedMemo}
+                            {memo}
                         </span>
                     </Tooltip>
                 );
