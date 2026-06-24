@@ -340,9 +340,9 @@ router.get('/', requireReadAccess, async (req, res) => {
         }
 
         if (search) {
-            whereClause += ' AND (l.part_name LIKE ? OR l.client_name LIKE ? OR l.manager_name LIKE ? OR s.site_name LIKE ? OR s.site_number LIKE ?)';
+            whereClause += ' AND (l.part_name LIKE ? OR l.client_name LIKE ? OR l.manager_name LIKE ? OR l.memo LIKE ? OR s.site_name LIKE ? OR s.site_number LIKE ?)';
             const searchTerm = `%${search}%`;
-            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
         }
 
         // 상태 필터링 조건 추가
