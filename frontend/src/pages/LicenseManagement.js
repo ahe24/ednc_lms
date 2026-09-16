@@ -368,7 +368,7 @@ const LicenseManagement = () => {
                 <Row gutter={16} align="middle">
                     <Col xs={24} sm={12} md={8}>
                         <Search
-                            placeholder="License 검색..."
+                            placeholder="제품명, Host ID, 고객명, 담당자 검색..."
                             value={filters.search}
                             onSearch={handleSearch}
                             onChange={(e) => {
