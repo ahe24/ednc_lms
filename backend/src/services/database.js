@@ -8,7 +8,7 @@ moment.tz.setDefault('Asia/Seoul');
 class DatabaseService {
     constructor() {
         this.db = null;
-        this.dbPath = process.env.DB_PATH || path.join(__dirname, '../database/licenses.db');
+        this.dbPath = process.env.DB_PATH || path.join(__dirname, '../../database/licenses.db');
     }
     
     initialize() {

@@ -297,7 +297,7 @@ router.get('/sites-summary', async (req, res) => {
 router.get('/system-status', async (req, res) => {
     try {
         // 데이터베이스 파일 크기 확인
-        const dbPath = process.env.DB_PATH || path.join(__dirname, '../database/licenses.db');
+        const dbPath = process.env.DB_PATH || path.join(__dirname, '../../database/licenses.db');
         let dbSize = 0;
         try {
             const stats = require('fs').statSync(dbPath);

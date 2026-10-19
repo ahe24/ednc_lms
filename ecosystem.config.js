@@ -1,24 +1,10 @@
 const path = require('path');
-const fs = require('fs');
 
-// dotenv 없이 .env 파일 직접 파싱 (PM2는 전역 컨텍스트에서 실행되므로)
-try {
-  const envContent = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
-  envContent.split('\n').forEach(line => {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('#')) {
-      const eqIdx = trimmed.indexOf('=');
-      if (eqIdx > 0) {
-        const key = trimmed.slice(0, eqIdx).trim();
-        const val = trimmed.slice(eqIdx + 1).trim();
-        if (!process.env[key]) process.env[key] = val;
-      }
-    }
-  });
-} catch (e) { /* .env 파일 없으면 기본값 사용 */ }
+// 루트 .env 로드 (호스트/포트/보안 설정은 루트 .env 한 곳에서만 관리)
+require('./load-env')();
 
 // 로그 디렉토리 설정 - 권한에 따라 동적으로 결정
-const projectRoot = '/home/ednc-csjo/git_rep/lms_ednc';
+const projectRoot = __dirname;
 
 const SERVER_IP = process.env.SERVER_IP || 'localhost';
 const BACKEND_PORT = process.env.BACKEND_PORT || 3601;
@@ -72,8 +58,8 @@ module.exports = {
         PORT: FRONTEND_PORT,
         HOST: '0.0.0.0',
         BROWSER: 'none',
-        REACT_APP_API_BASE_URL: `http://${SERVER_IP}:${BACKEND_PORT}`,
-        REACT_APP_SERVER_IP: SERVER_IP,
+        // API 주소는 브라우저 접속 주소(window.location.hostname) + 백엔드 포트로 자동 결정
+        // → LAN IP / DDNS 어느 쪽으로 접속해도 동작
         REACT_APP_BACKEND_PORT: BACKEND_PORT
       },
       instances: 1,

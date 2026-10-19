@@ -17,9 +17,9 @@
     "i18next": "^23.7.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "node scripts/with-root-env.js start",
+    "build": "node scripts/with-root-env.js build",
+    "test": "node scripts/with-root-env.js test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -43,6 +43,5 @@
   "devDependencies": {
     "react-scripts": "5.0.1"
   },
-  "homepage": ".",
-  "proxy": "http://localhost:3601"
+  "homepage": "."
 }

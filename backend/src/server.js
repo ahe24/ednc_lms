@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+require('../../load-env')(); // 루트 .env 로드
 const express = require('express');
 const path = require('path');
 const moment = require('moment-timezone');
@@ -8,7 +8,7 @@ process.env.TZ = 'Asia/Seoul';
 moment.tz.setDefault('Asia/Seoul');
 
 const app = express();
-const PORT = process.env.PORT || 3601;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 3601;
 const HOST = process.env.HOST || '0.0.0.0';
 
 console.log(`🌏 시간대 설정: ${process.env.TZ}`);
